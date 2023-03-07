@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "description": "",
   "scripts": {
-    "start": "cross-env NODE_ENV=production node ./server/server.js",
-    "start:dev": "cross-env NODE_ENV=development nodemon ./server/server.js",
+    "start": "cross-env NODE_ENV=production node ./server.js",
+    "start:dev": "cross-env NODE_ENV=development nodemon ./server.js",
     "lint": "eslint **/*.js",
     "lint:fix": "eslint --fix **/*.js"
   },
