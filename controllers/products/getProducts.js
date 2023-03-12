@@ -2,11 +2,15 @@ const Product = require('../../models/product');
 
 const getProducts = async (req, res) => {
   const { page = 1, limit = 6, category } = req.query;
-  const categories = category ? category.split(",") : [];
+  let categories = category ? category.split(",") : [];
+
+  const excludedCategories = ["low", "high"];
+  categories = categories.filter((cat) => !excludedCategories.includes(cat));
 
   const query = {
     comingSoon: { $exists: false }
   };
+
   if (categories.length > 0) {
     query.category = { $in: categories };
   }
