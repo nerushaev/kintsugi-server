@@ -29,10 +29,11 @@ const getProducts = async (req, res) => {
 
   const count = await Product.countDocuments(query);
   const products = await Product.find(query)
-    .sort({"price": sort.price, "_id": 1})
+    .sort({ "price": sort.price })
     .limit(limit * 1)
     .skip((page - 1) * limit)
     .exec();
+  
   res.json({
     products,
     totalPages: Math.ceil(count / limit),
