@@ -12,8 +12,16 @@ const getProducts = async (req, res) => {
   }
   console.log(query);
 
+  let sort = {};
+  if (categories.includes("low")) {
+    sort.price = 1;
+  } else if (categories.includes("high")) {
+    sort.price = -1;
+  }
+
   const count = await Product.countDocuments(query);
   const products = await Product.find(query)
+    .sort(sort)
     .limit(limit * 1)
     .skip((page - 1) * limit)
     .exec();
