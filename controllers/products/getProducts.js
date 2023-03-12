@@ -3,28 +3,33 @@ const Product = require('../../models/product');
 const getProducts = async (req, res) => {
   const { page = 1, limit = 6, category } = req.query;
   const allCategories = category ? category.split(",") : [];
-
-  const excludedCategories = ["low", "high"];
-  const filteredCategories = allCategories.filter((cat) => !excludedCategories.includes(cat));
+  const priceFilter = allCategories.includes('low') ? 'low' : allCategories.includes('high') ? 'high' : null;
+  const categoryFilters = allCategories.filter(cat => cat !== 'low' && cat !== 'high');
+  
+  if (categoryFilters.length === 0) {
+    categoryFilters.push('wigs', 'costume', 'accessories', 'smallStand', 'bigStand', 'pendant', 'pin', 'hairpins', 'earrings', 'tapestries', 'other');
+  }
 
   const query = {
     comingSoon: { $exists: false }
   };
 
-  if (allCategories.length > 0) {
-    query.category = { $in: filteredCategories };
+  if (categoryFilters.length > 0) {
+  query.category = { $in: categoryFilters };
   }
-
+  
   let sort = {};
-  if (allCategories.includes("low")) {
+  if (priceFilter === 'low') {
     sort.price = 1;
-  } else if (allCategories.includes("high")) {
+  } else if (priceFilter === 'high') {
     sort.price = -1;
   }
 
+  console.log(sort);
+
   const count = await Product.countDocuments(query);
   const products = await Product.find(query)
-    .sort(sort)
+    .sort({"price": sort, "_id": 1})
     .limit(limit * 1)
     .skip((page - 1) * limit)
     .exec();
