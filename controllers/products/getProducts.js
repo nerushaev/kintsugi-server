@@ -2,24 +2,23 @@ const Product = require('../../models/product');
 
 const getProducts = async (req, res) => {
   const { page = 1, limit = 6, category } = req.query;
-  let categories = category ? category.split(",") : [];
+  const allCategories = category ? category.split(",") : [];
 
   const excludedCategories = ["low", "high"];
-  categories = categories.filter((cat) => !excludedCategories.includes(cat));
+  const filteredCategories = allCategories.filter((cat) => !excludedCategories.includes(cat));
 
   const query = {
     comingSoon: { $exists: false }
   };
 
-  if (categories.length > 0) {
-    query.category = { $in: categories };
+  if (allCategories.length > 0) {
+    query.category = { $in: filteredCategories };
   }
-  console.log(query);
 
   let sort = {};
-  if (categories.includes("low")) {
+  if (allCategories.includes("low")) {
     sort.price = 1;
-  } else if (categories.includes("high")) {
+  } else if (allCategories.includes("high")) {
     sort.price = -1;
   }
 
