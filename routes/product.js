@@ -10,7 +10,7 @@ const productCtrl = require('../controllers/products');
 
 router.get('/', productCtrl.getProducts);
 
-router.get('/search/:searchReq', ctrlWrapper(productCtrl.getProductsByName));
+// router.get('/search/:searchReq', ctrlWrapper(productCtrl.getProductsByName));
 
 router.get('/all', ctrlWrapper(productCtrl.getAllProducts));
 
