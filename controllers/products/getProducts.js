@@ -1,7 +1,7 @@
 const Product = require('../../models/product');
 
 const getProducts = async (req, res) => {
-  const { page = 1, limit = 6, category } = req.query;
+  const { page = 1, limit = 12, category } = req.query;
   const allCategories = category ? category.split(",") : [];
   const priceFilter = allCategories.includes('low') ? 'low' : allCategories.includes('high') ? 'high' : null;
   const categoryFilters = allCategories.filter(cat => cat !== 'low' && cat !== 'high');
@@ -15,7 +15,7 @@ const getProducts = async (req, res) => {
   };
 
   if (categoryFilters.length > 0) {
-  query.category = { $in: categoryFilters };
+    query.category = { $in: categoryFilters };
   }
   
   let sort = {};
@@ -24,8 +24,6 @@ const getProducts = async (req, res) => {
   } else if (priceFilter === 'high') {
     sort.price = -1;
   }
-
-  console.log(sort);
 
   const count = await Product.countDocuments(query);
   const products = await Product.find(query)
