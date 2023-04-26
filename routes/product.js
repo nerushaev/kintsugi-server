@@ -20,7 +20,8 @@ router.get('/:_id', ctrlWrapper(productCtrl.getProductById));
 
 router.delete('/:productId', ctrlWrapper(productCtrl.removeProductById));
 
-router.post('/', upload.single("image"), validateMiddleware, ctrlWrapper(productCtrl.addProduct));
+router.post('/', upload.array("image"), validateMiddleware, ctrlWrapper(productCtrl.addProduct));
+// router.post('/', upload.array("image"), validateMiddleware, ctrlWrapper(productCtrl.addProduct));
 
 router.put('/:productId', upload.single("image"), validateMiddleware, ctrlWrapper(productCtrl.updateProductById));
 
