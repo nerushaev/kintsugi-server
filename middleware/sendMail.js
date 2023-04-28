@@ -11,7 +11,7 @@ const nodemailerConfig = {
   }
 };
 
-const transport = nodemailer.createTransport(nodemailerConfig);
+export const transport = nodemailer.createTransport(nodemailerConfig);
 
 const email = {
   to: 'kolyanerushaev@gmail.com',
@@ -20,6 +20,3 @@ const email = {
   html: '<p>Перука</p>',
 };
 
-transport.sendMail(email)
-  .then(() => console.log('Email send success'))
-  .catch((e) => console.log(e.message));
