@@ -22,5 +22,4 @@ router.post('/', upload.array("image"), validateMiddleware, ctrlWrapper(productC
 
 router.put('/:productId', validateMiddleware, ctrlWrapper(productCtrl.updateProductById));
 
-
 module.exports = router;

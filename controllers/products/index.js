@@ -15,5 +15,5 @@ module.exports = {
   updateProductById,
   getAllProducts,
   getComingSoonProducts,
-  getProductsByName,
+  getProductsByName
 }
