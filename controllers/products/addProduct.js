@@ -8,6 +8,7 @@ cloudinary.config = ({
 });
 
 const addProduct = async (req, res) => {
+
   const uploader = async (path) => await uploads(path, 'Images');
   
   const urls = [];
