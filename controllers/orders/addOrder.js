@@ -1,4 +1,3 @@
-const Order = require("../../models/order");
 const randomId = require("random-id");
 const Product = require("../../models/product");
 const createWaybill = require("../../middleware/createWaybill");
