@@ -1,13 +1,13 @@
-const { User } = require('../models/user');
-const createHttpError = require('http-errors');
-const jwt = require('jsonwebtoken');
-const { SECRET_KEY } = process.env;
+const { User } = require("../models/user");
+const createHttpError = require("http-errors");
+const jwt = require("jsonwebtoken");
+const { ACCESS_SECRET_KEY } = process.env;
 
 const authenticate = async (req, res, next) => {
   const { authorization } = req.headers;
-  if (authorization === undefined) {
+  if (!authorization) {
     next(createHttpError(401));
-    return
+    return;
   }
   const [bearer, token] = authorization ? authorization.split(" ") : null;
 
@@ -16,17 +16,16 @@ const authenticate = async (req, res, next) => {
   }
 
   try {
-    const { id } = jwt.verify(token, SECRET_KEY);
+    const { id } = jwt.verify(token, ACCESS_SECRET_KEY);
     const user = await User.findById(id);
     if (!user || !user.token) {
       next(createHttpError(401));
     }
-    req.user = user; 
+    req.user = user;
     next();
   } catch {
     next(createHttpError(401));
   }
 };
-
 
 module.exports = authenticate;
