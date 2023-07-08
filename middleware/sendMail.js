@@ -1,22 +1,17 @@
-const nodemailer = require('nodemailer');
-const { KINTSUGI_GMAIL_PASSWORD } = process.env;
+const nodemailer = require("nodemailer");
+const { KINTSUGI_GMAIL_PASSWORD, KINTSUGI_GMAIL, KINTSUGI_GMAIL_VERIFICATION } =
+  process.env;
 
 const nodemailerConfig = {
-  host: 'smtp.gmail.com',
+  host: "smtp.gmail.com",
   port: 465,
   secure: true,
   auth: {
-    user: 'kintsugi.cosplay.store@gmail.com',
-    pass: 'avkxixqoajwwdcdn',
-  }
+    user: KINTSUGI_GMAIL,
+    pass: KINTSUGI_GMAIL_VERIFICATION,
+  },
 };
 
-export const transport = nodemailer.createTransport(nodemailerConfig);
+const transport = nodemailer.createTransport(nodemailerConfig);
 
-const email = {
-  to: 'kolyanerushaev@gmail.com',
-  from: 'kintsugi.cosplay.store@gmail.com',
-  subject: 'Нове замовлення!',
-  html: '<p>Перука</p>',
-};
-
+module.exports = transport;

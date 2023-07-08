@@ -1,41 +1,81 @@
-const { User } = require('../../models/user');
-const createHttpError = require('http-errors');
-const bcrypt = require('bcrypt');
-
-const jwt = require('jsonwebtoken');
-const { SECRET_KEY } = process.env;
+const { User } = require("../../models/user");
+const createHttpError = require("http-errors");
+const bcrypt = require("bcrypt");
+const { generateTokens } = require("../../helpers");
 
 const login = async (req, res) => {
   const { email, password } = req.body;
 
-  const userData = await User.findOne({ email });
+  const user = await User.findOne({ email });
 
   if (!email) {
-    throw createHttpError(401, 'Email invalid...')
-  };
+    throw createHttpError(401, "Email invalid...");
+  }
 
-  const passwordCompare = bcrypt.compare(password, userData.password);
+  const passwordCompare = bcrypt.compare(password, user.password);
 
   if (!passwordCompare) {
     throw createHttpError(401, "Password invalid...");
-  };
+  }
 
-  const payload = {
-    id: userData._id,
-  };
+  const { token, refreshToken } = await generateTokens(user._id);
 
-  const token = jwt.sign(payload, SECRET_KEY, { expiresIn: "23h" });
-  await User.findByIdAndUpdate(userData._id, { token });
+  await User.findByIdAndUpdate(user._id, { token, refreshToken });
+  console.log(user);
+  const { name } = user;
 
-  const { name } = userData;
+  res.cookie("refreshToken", refreshToken, {
+    httpOnly: true,
+    maxAge: 30 * 24 * 60 * 60 * 1000,
+  });
 
   res.json({
     token,
     user: {
       email,
-      name
-    }
-  })
+      name,
+    },
+  });
 };
 
 module.exports = login;
+
+// const bcrypt = require("bcrypt");
+
+// const User = require("../../models/user");
+// const RequestError = require("../../helpers/requestError");
+// const { generateTokens } = require("../../helpers/generateTokens");
+
+// const login = async (req, res) => {
+//   const { email, password } = req.body;
+//   const user = await User.findOne({ email });
+
+//   if (!user) {
+//     throw RequestError(401, "Email or password is wrong");
+//   }
+
+//   const comparePassword = await bcrypt.compare(password, user.password);
+
+//   if (!comparePassword) {
+//     throw RequestError(401, "Email or password is wrong");
+//   }
+
+//   const { token, refreshToken } = await generateTokens(user._id);
+
+//   await User.findByIdAndUpdate(user._id, { token, refreshToken });
+
+//   res.cookie("refreshToken", refreshToken, {
+//     httpOnly: true,
+//     maxAge: 30 * 24 * 60 * 60 * 1000,
+//   });
+
+//   res.json({
+//     token,
+//     user: {
+//       name: user.name,
+//       email: user.email,
+//     },
+//   });
+// };
+
+// module.exports = login;
