@@ -6,6 +6,7 @@ const User = require("../../models/user");
 const { REFRESH_SECRET_KEY } = process.env;
 
 const refresh = async (req, res) => {
+  console.log(req.cockies);
   const { refreshToken } = req.cookies;
 
   if (!refreshToken) {
