@@ -5,6 +5,7 @@ const { generateTokens } = require("../../helpers");
 
 const login = async (req, res) => {
   const { email, password } = req.body;
+  console.log(req.cockies);
 
   const user = await User.findOne({ email });
 
@@ -24,18 +25,18 @@ const login = async (req, res) => {
   console.log(user);
   const { name } = user;
 
-  res.cookie("refreshToken", refreshToken, {
-    httpOnly: true,
-    maxAge: 30 * 24 * 60 * 60 * 1000,
-  });
-
-  res.json({
-    token,
-    user: {
-      email,
-      name,
-    },
-  });
+  res
+    .cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      maxAge: 30 * 24 * 60 * 60 * 1000,
+    })
+    .json({
+      token,
+      user: {
+        email,
+        name,
+      },
+    });
 };
 
 module.exports = login;

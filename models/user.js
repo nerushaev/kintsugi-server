@@ -5,22 +5,26 @@ const userSchema = new Schema(
   {
     name: {
       type: String,
-      required: [true, "Set name for product!"],
+      required: [true, "Set name!"],
     },
     email: {
       type: String,
       unique: true,
-      required: true,
+      required: [true, "Set email!"],
     },
     phone: {
       type: String,
-      unique: true,
-      required: true,
+      unique: [true, "Phone is not unique!"],
+      required: [true, "Set phone!"],
     },
     password: {
       type: String,
       required: true,
       minLength: 6,
+    },
+    verify: {
+      type: String,
+      default: false,
     },
     token: {
       type: String,
@@ -28,6 +32,12 @@ const userSchema = new Schema(
     role: {
       type: String,
     },
+    orders: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "orders",
+      },
+    ],
   },
   { versionKey: false, timestampts: true }
 );
