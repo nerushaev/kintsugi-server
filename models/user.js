@@ -34,7 +34,7 @@ const userSchema = new Schema(
     },
     orders: [
       {
-        type: Schema.Types.ObjectId,
+        type: Schema.Types.Mixed,
         ref: "orders",
       },
     ],

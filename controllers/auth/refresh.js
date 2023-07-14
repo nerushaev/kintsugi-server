@@ -1,7 +1,6 @@
 const jwt = require("jsonwebtoken");
-const { generateTokens } = require("../../helpers/generateTokens");
-const RequestError = require("../../helpers/requestError");
-const User = require("../../models/user");
+const { generateTokens, RequestError } = require("../../helpers");
+const { User } = require("../../models/user");
 
 const { REFRESH_SECRET_KEY } = process.env;
 
@@ -37,6 +36,7 @@ const refresh = async (req, res) => {
     user: {
       name: data.name,
       email: data.email,
+      phone: data.phone,
     },
   });
 };
