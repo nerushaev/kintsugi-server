@@ -8,7 +8,7 @@ const cors = require("cors");
 const origin =
   process.env.NODE_ENV === "development"
     ? "http://localhost:3000"
-    : "http://example.com";
+    : "https://kintsugi-black.vercel.app";
 
 const productsRouter = require("./routes/product");
 const authRouter = require("./routes/auth");
