@@ -25,7 +25,7 @@ const orderSchema = new Schema({
     type: String,
     required: [true, "Set warehouse name"],
   },
-  RecipientWarehouseIndex: {
+  recipientWarehouseIndex: {
     type: String,
     required: [true, "Set RecipientWarehouseIndex!"],
   },
@@ -50,10 +50,6 @@ const orderSchema = new Schema({
     required: [true, "Set options!"],
   },
   password: {
-    type: String,
-    required: [false],
-  },
-  confirmPassword: {
     type: String,
     required: [false],
   },

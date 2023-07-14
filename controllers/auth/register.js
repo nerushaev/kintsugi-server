@@ -8,12 +8,23 @@ const { KINTSUGI_GMAIL, BASE_URL } = process.env;
 const gravatar = require("gravatar");
 
 const register = async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, phone } = req.body;
 
-  const user = await User.findOne({ email });
+  const duplicateEmail = await User.findOne({ email });
+  const duplicatePhone = await User.findOne({ phone });
 
-  if (user) {
-    throw RequestError(409, "Email in use...");
+  if (duplicateEmail) {
+    res.status(409).json({
+      status: 409,
+      message: "Користувач із такою поштою вже існує!",
+    });
+  }
+
+  if (duplicatePhone) {
+    res.status(409).json({
+      status: 409,
+      message: "Користувач із таким номером вже існує!",
+    });
   }
 
   const hashPassword = await bcrypt.hash(password, 10);
@@ -49,6 +60,7 @@ const register = async (req, res) => {
   await transport.sendMail(verifyEmail);
 
   res.status(201).json({
+    status: 201,
     token,
     refreshToken,
     verificationToken,

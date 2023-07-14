@@ -3,8 +3,6 @@ require("dotenv").config();
 const { NOVA_BASE_URL, NOVA_API_KEY } = process.env;
 
 const getStreetRef = async (cityRef, cityName) => {
-  console.log(cityRef);
-  console.log(cityName);
   try {
     const { data } = await axios.post(NOVA_BASE_URL, {
       apiKey: NOVA_API_KEY,
@@ -17,7 +15,6 @@ const getStreetRef = async (cityRef, cityName) => {
         Limit: 5,
       },
     });
-    console.log(data);
     return data;
   } catch (error) {
     console.log(error);
