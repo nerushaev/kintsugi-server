@@ -1,11 +1,8 @@
 const express = require("express");
 const router = express.Router();
-const { ctrlWrapper, validation, upload } = require("../middleware");
-const { productSchema } = require("../schemas");
+const { ctrlWrapper, upload } = require("../middleware");
 
-const validateMiddleware = validation(productSchema);
-
-const productCtrl = require("../controllers/products");
+const bannersCtrl = require("../controllers/banners");
 
 router.get("/", productCtrl.getProducts);
 

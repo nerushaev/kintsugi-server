@@ -5,7 +5,6 @@ const { generateTokens } = require("../../helpers");
 
 const login = async (req, res) => {
   const { email, password } = req.body;
-  console.log(req.cockies);
 
   const user = await User.findOne({ email });
 
@@ -13,7 +12,8 @@ const login = async (req, res) => {
     throw createHttpError(401, "Email invalid...");
   }
 
-  const passwordCompare = bcrypt.compare(password, user.password);
+  const passwordCompare = await bcrypt.compare(password, user.password);
+  console.log(passwordCompare);
 
   if (!passwordCompare) {
     throw createHttpError(401, "Password invalid...");
@@ -32,10 +32,7 @@ const login = async (req, res) => {
     })
     .json({
       token,
-      user: {
-        email,
-        name,
-      },
+      user,
     });
 };
 
