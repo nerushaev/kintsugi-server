@@ -37,6 +37,7 @@ const refresh = async (req, res) => {
       name: data.name,
       email: data.email,
       phone: data.phone,
+      role: data.role,
     },
   });
 };

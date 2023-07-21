@@ -3,11 +3,14 @@ const { User } = require("../../models/user");
 const logout = async (req, res) => {
   const { _id } = req.user;
 
-  await User.findOneAndUpdate(_id, { token: "", refreshToken: "" });
+  const result = await User.findByIdAndUpdate(_id, {
+    token: "",
+    refreshToken: "",
+  });
+  console.log("result", result);
+  // res.clearCookie("refreshToken");
 
-  res.clearCookie("refreshToken");
-
-  res.status(204).json({
+  res.clearCookie("refreshToken").status(200).json({
     message: "Logout success!",
   });
 };
