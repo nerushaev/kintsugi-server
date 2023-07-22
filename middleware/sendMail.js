@@ -1,6 +1,5 @@
 const nodemailer = require("nodemailer");
-const { KINTSUGI_GMAIL_PASSWORD, KINTSUGI_GMAIL, KINTSUGI_GMAIL_VERIFICATION } =
-  process.env;
+const { KINTSUGI_GMAIL, KINTSUGI_GMAIL_VERIFICATION } = process.env;
 
 const nodemailerConfig = {
   host: "smtp.gmail.com",

@@ -1,6 +1,6 @@
 const { User } = require("../../models/user");
 const bcrypt = require("bcrypt");
-const RequestError = require("../../helpers/requestError");
+// const RequestError = require("../../helpers/requestError");
 const randomId = require("random-id");
 const { transport } = require("../../middleware");
 const { generateTokens } = require("../../helpers");
@@ -43,13 +43,6 @@ const register = async (req, res) => {
 
   await User.findByIdAndUpdate(newUser._id, { token, refreshToken });
 
-  res.cookie("refreshToken", refreshToken, {
-    httpOnly: true,
-    sameSite: "None",
-    secure: true,
-    maxAge: 30 * 24 * 60 * 60 * 1000,
-  });
-
   const verifyEmail = {
     from: KINTSUGI_GMAIL,
     to: email,
@@ -58,6 +51,13 @@ const register = async (req, res) => {
   };
 
   await transport.sendMail(verifyEmail);
+
+  res.cookie("refreshToken", refreshToken, {
+    httpOnly: true,
+    sameSite: "None",
+    secure: true,
+    maxAge: 30 * 24 * 60 * 60 * 1000,
+  });
 
   res.status(201).json({
     status: 201,
