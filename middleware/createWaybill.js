@@ -17,6 +17,7 @@ const createWaybill = async (clientData) => {
     warehouseAddress,
     warehouseRef,
     phone,
+    totalPrice,
   } = clientData;
 
   const resultDescription = products.map((item) => {
@@ -60,12 +61,12 @@ const createWaybill = async (clientData) => {
         PayerType: "Recipient",
         PaymentMethod: "Cash",
         DateTime: dataNow,
-        CargoType: "Parsel",
+        CargoType: "Cargo",
         Weight: "1",
         ServiceType: "WarehouseWarehouse",
         SeatsAmount: "1",
         Description: `${resultDescription}`,
-        Cost: "300",
+        Cost: `${totalPrice}`,
         CitySender: "db5c88d0-391c-11dd-90d9-001a92567626",
         Sender: "fa8a6f92-e682-11e7-becf-005056881c6b",
         SenderAddress: NOVA_SENDER_ADDRESS_REF,

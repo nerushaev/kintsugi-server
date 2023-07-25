@@ -10,9 +10,9 @@ const createRecipient = async ({ name, phone, email }) => {
     modelName: "Counterparty",
     calledMethod: "save",
     methodProperties: {
-      FirstName: userName[0],
-      MiddleName: userName[1],
-      LastName: userName[2],
+      FirstName: userName[1],
+      MiddleName: userName[2],
+      LastName: userName[0],
       Phone: phone,
       Email: email,
       CounterpartyType: "PrivatePerson",
