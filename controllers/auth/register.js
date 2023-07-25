@@ -4,7 +4,7 @@ const bcrypt = require("bcrypt");
 const randomId = require("random-id");
 const { transport } = require("../../middleware");
 const { generateTokens } = require("../../helpers");
-const { KINTSUGI_GMAIL, BASE_URL } = process.env;
+const { KINTSUGI_GMAIL, BASE_BACK_END_URL } = process.env;
 const gravatar = require("gravatar");
 
 const register = async (req, res) => {
@@ -47,7 +47,7 @@ const register = async (req, res) => {
     from: KINTSUGI_GMAIL,
     to: email,
     subject: "Верифікація пошти Kintsugi Cosplay",
-    html: `<p>Давай верифікуємо твою пошту. Натисни тут <a target="_blank" href="${BASE_URL}/api/users/verify/${verificationToken}">link</a> .</p>`,
+    html: `<p>Давай верифікуємо твою пошту. Натисни тут <a target="_blank" href="${BASE_BACK_END_URL}/api/auth/verify/${verificationToken}">link</a> .</p>`,
   };
 
   await transport.sendMail(verifyEmail);

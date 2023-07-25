@@ -1,7 +1,7 @@
 const { Schema, model } = require("mongoose");
 
 const orderSchema = new Schema({
-  orderId: {
+  orderRef: {
     type: String,
     required: [false, "Need order ID"],
   },
@@ -50,6 +50,10 @@ const orderSchema = new Schema({
     required: [true, "Set options!"],
   },
   password: {
+    type: String,
+    required: [false],
+  },
+  date: {
     type: String,
     required: [false],
   },

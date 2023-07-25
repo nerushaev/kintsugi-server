@@ -1,13 +1,14 @@
-const { User } = require("../../models/user");
-
 const getCurrent = async (req, res) => {
-  const { email, name, phone, role } = req.user;
+  const { email, name, phone, role, orders, delivery, verify } = req.user;
 
   res.json({
-    name,
     email,
+    name,
     phone,
     role,
+    orders,
+    delivery,
+    verify,
   });
 };
 

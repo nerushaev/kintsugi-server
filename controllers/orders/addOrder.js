@@ -4,17 +4,29 @@ const createWaybill = require("../../middleware/createWaybill");
 const Order = require("../../models/order");
 const { User } = require("../../models/user");
 const { RequestError } = require("../../helpers");
+const { formatDate } = require("../../helpers");
 
 const addOrder = async (req, res) => {
   // Проверяем зарегистрирован ли пользователь
-  const { email } = req.body;
+  const {
+    email,
+    city,
+    cityRef,
+    warehouse,
+    warehouseAddress,
+    recipientWarehouseIndex,
+    warehouseRef,
+  } = req.body;
   const user = await User.findOne({ email });
   // Создаём из массива обьектов массив айди
   const orderId = randomId(8, "aA0");
   const { products } = req.body;
   let arrayId = [];
+  let totalPrice = 0;
+
   products.map((item) => {
     arrayId.push(item._id);
+    totalPrice = totalPrice + Math.floor(item.price);
   });
 
   const items = await Product.find({ _id: { $in: arrayId } });
@@ -46,16 +58,43 @@ const addOrder = async (req, res) => {
     });
   }
 
-  const data = await createWaybill(req.body);
-  await Order.create(req.body);
+  const today = new Date();
+  const date = formatDate(today, "dd/mm/yy");
+
+  console.log(req.body);
+
+  const deliveryData = {
+    city,
+    cityRef,
+    warehouse,
+    warehouseAddress,
+    recipientWarehouseIndex,
+    warehouseRef,
+  };
+
+  const data = await createWaybill({ ...req.body, totalPrice });
+  await Order.create({ ...req.body, orderRef: data.data[0].Ref });
 
   if (user) {
     await User.findByIdAndUpdate(user._id, {
-      $push: { orders: products },
+      $push: {
+        orders: {
+          products: [...products],
+          orderRef: data.data[0].Ref,
+          date,
+          totalPrice,
+        },
+      },
     });
   }
 
-  console.log(data);
+  if (!user.delivery) {
+    console.log("a");
+    await User.findOneAndUpdate(user._id, {
+      $set: { delivery: deliveryData },
+    });
+  }
+
   if (data.success) {
     res.status(201).json({
       message: "Накладна успішно створена!",

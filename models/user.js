@@ -23,7 +23,7 @@ const userSchema = new Schema(
       minLength: 6,
     },
     verify: {
-      type: String,
+      type: Boolean,
       default: false,
     },
     token: {
@@ -38,6 +38,10 @@ const userSchema = new Schema(
         ref: "orders",
       },
     ],
+    delivery: {
+      type: Schema.Types.Mixed,
+      required: false,
+    },
   },
   { versionKey: false, timestampts: true }
 );
