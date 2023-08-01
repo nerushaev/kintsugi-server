@@ -21,9 +21,10 @@ const formatsLogger = app.get("env") === "development" ? "dev" : "short";
 app.use(
   cors({
     credentials: true,
-    origin: "https://www.kintsugi.org.ua/",
+    origin: "*",
   })
 );
+
 app.use(logger(formatsLogger));
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.json());
