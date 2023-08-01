@@ -5,12 +5,13 @@ const { ACCESS_SECRET_KEY } = process.env;
 
 const authenticate = async (req, res, next) => {
   const { authorization } = req.headers;
+  console.log(authorization);
   if (!authorization) {
     next(createHttpError(401));
     return;
   }
   const [bearer, token] = authorization ? authorization.split(" ") : null;
-
+  console.log(bearer);
   if (bearer !== "Bearer") {
     next(createHttpError(401));
   }
@@ -18,7 +19,7 @@ const authenticate = async (req, res, next) => {
   try {
     const { id } = jwt.verify(token, ACCESS_SECRET_KEY);
     const user = await User.findById(id);
-    if (!user || !user.token) {
+    if (!user || !token) {
       next(createHttpError(401));
     }
     req.user = user;

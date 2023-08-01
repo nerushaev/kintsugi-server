@@ -26,7 +26,7 @@ const userSchema = new Schema(
       type: Boolean,
       default: false,
     },
-    token: {
+    verificationToken: {
       type: String,
     },
     role: {
@@ -41,6 +41,9 @@ const userSchema = new Schema(
     delivery: {
       type: Schema.Types.Mixed,
       required: false,
+    },
+    avatarURL: {
+      type: String,
     },
   },
   { versionKey: false, timestampts: true }
