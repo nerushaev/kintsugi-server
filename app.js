@@ -15,7 +15,7 @@ const authRouter = require("./routes/auth");
 const orderRouter = require("./routes/order");
 
 const app = express();
-console.log(origin);
+
 const formatsLogger = app.get("env") === "development" ? "dev" : "short";
 
 app.use(
