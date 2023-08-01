@@ -9,7 +9,7 @@ const origin =
   process.env.NODE_ENV === "development"
     ? "http://localhost:3000"
     : "https://kintsugi.org.ua/";
-
+console.log(origin);
 const productsRouter = require("./routes/product");
 const authRouter = require("./routes/auth");
 const orderRouter = require("./routes/order");
