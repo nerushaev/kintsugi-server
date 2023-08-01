@@ -21,7 +21,7 @@ const formatsLogger = app.get("env") === "development" ? "dev" : "short";
 app.use(
   cors({
     credentials: true,
-    origin: "*",
+    origin: false,
   })
 );
 
