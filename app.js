@@ -20,8 +20,8 @@ const formatsLogger = app.get("env") === "development" ? "dev" : "short";
 
 app.use(
   cors({
-    credentials: true || false,
-    origin,
+    credentials: true,
+    origin: "https://www.kintsugi.org.ua/",
   })
 );
 app.use(logger(formatsLogger));
