@@ -8,7 +8,7 @@ const cors = require("cors");
 const origin =
   process.env.NODE_ENV === "development"
     ? "http://localhost:3000"
-    : "https://www.kintsugi.org.ua";
+    : "http://www.kintsugi.org.ua";
 console.log(origin);
 const productsRouter = require("./routes/product");
 const authRouter = require("./routes/auth");
