@@ -23,7 +23,6 @@ const login = async (req, res) => {
 
   await User.findByIdAndUpdate(user._id, { token, refreshToken });
   console.log(user);
-  const { name } = user;
 
   res
     .cookie("refreshToken", refreshToken, {

@@ -39,8 +39,24 @@ const userSchema = new Schema(
       },
     ],
     delivery: {
-      type: Schema.Types.Mixed,
-      required: false,
+      city: {
+        type: String,
+      },
+      cityRef: {
+        type: String,
+      },
+      warehouse: {
+        type: String,
+      },
+      recipientWarehouseIndex: {
+        type: String,
+      },
+      warehouseRef: {
+        type: String,
+      },
+      warehouseAddress: {
+        type: String,
+      },
     },
     avatarURL: {
       type: String,
