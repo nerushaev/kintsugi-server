@@ -73,15 +73,16 @@ const addOrder = async (req, res) => {
   };
 
   const data = await createWaybill({ ...req.body, totalPrice });
+  console.log(data);
 
   if (data) {
-    await Order.create({ ...req.body, orderRef: data.data[0].Ref });
+    await Order.create({ ...req.body, orderRef: data.data[0].IntDocNumber });
     if (user) {
       await User.findByIdAndUpdate(user._id, {
         $push: {
           orders: {
             products: [...products],
-            orderRef: data.data[0].Ref,
+            orderRef: data.data[0].IntDocNumber,
             date,
             totalPrice,
           },

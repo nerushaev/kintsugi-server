@@ -15,7 +15,7 @@ const createWaybill = async (clientData) => {
     products,
     cityRef,
     warehouseAddress,
-    warehouseRef,
+    // warehouseRef,
     phone,
     totalPrice,
   } = clientData;

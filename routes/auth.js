@@ -27,7 +27,13 @@ router.post("/logout", authenticate, ctrlWrapper(authCtrl.logout));
 
 router.get("/refresh", ctrlWrapper(authCtrl.refresh));
 
-router.patch("/update", authenticate, ctrlWrapper(authCtrl.updateUser));
+router.patch(
+  "/updateUserDelivery",
+  authenticate,
+  ctrlWrapper(authCtrl.updateUserDelivery)
+);
+
+router.patch("/updateUser", authenticate, ctrlWrapper(authCtrl.updateUser));
 
 router.patch("/restore", ctrlWrapper(authCtrl.restorePass));
 

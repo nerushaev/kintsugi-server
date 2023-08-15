@@ -5,7 +5,7 @@ const randomId = require("random-id");
 const { transport } = require("../../middleware");
 const { generateTokens } = require("../../helpers");
 const { KINTSUGI_GMAIL, BASE_BACK_END_URL } = process.env;
-const gravatar = require("gravatar");
+// const gravatar = require("gravatar");
 
 const register = async (req, res) => {
   const { email, password, phone } = req.body;
@@ -29,7 +29,8 @@ const register = async (req, res) => {
 
   const hashPassword = await bcrypt.hash(password, 10);
   const verificationToken = randomId(36, "aA0");
-  const avatarURL = gravatar.url(email, { s: "233", protocol: "http" });
+  const avatarURL =
+    "https://res.cloudinary.com/dzjmswzgp/image/upload/v1691783112/Group_26_r3qewe.jpg";
 
   const newUser = await User.create({
     ...req.body,
