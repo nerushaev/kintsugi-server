@@ -10,9 +10,9 @@ const cors = require("cors");
 //     ? "http://localhost:3000"
 //     : "https://www.kintsugi.org.ua";
 const origin =
-  process.env.NODE_ENV === "development"
-    ? "http://localhost:3000"
-    : "https://kintsugi-black.vercel.app";
+  // process.env.NODE_ENV === "development"
+    // ? "http://localhost:3000"
+    "https://kintsugi-black.vercel.app";
 console.log(origin);
 const productsRouter = require("./routes/product");
 const authRouter = require("./routes/auth");
