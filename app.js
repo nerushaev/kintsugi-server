@@ -5,18 +5,14 @@ require("dotenv").config();
 const cookieParser = require("cookie-parser");
 const cors = require("cors");
 
-// const origin = "https://www.kintsugi.org.ua";
+const origin = "https://www.kintsugi.org.ua";
 
-const origin =
-  process.env.NODE_ENV === "development"
-    ? "http://localhost:3000"
-    : "https://www.kintsugi.org.ua";
-console.log(origin);
 // const origin =
-//   // process.env.NODE_ENV === "development"
-//     // ? "http://localhost:3000"
-//     "https://kintsugi-black.vercel.app";
+//   process.env.NODE_ENV === "development"
+//     ? "http://localhost:3000"
+//     : "https://www.kintsugi.org.ua";
 // console.log(origin);
+
 const productsRouter = require("./routes/product");
 const authRouter = require("./routes/auth");
 const orderRouter = require("./routes/order");
