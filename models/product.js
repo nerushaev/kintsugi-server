@@ -26,7 +26,9 @@ const productSchema = new Schema({
   },
   comingSoon: {
     type: String,
-  }
+  },
+  size:{type: Array,
+default: ["-"]}
 });
 
 const Product = model("product", productSchema);
