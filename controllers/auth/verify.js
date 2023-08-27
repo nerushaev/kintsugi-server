@@ -16,7 +16,7 @@ const verify = async (req, res) => {
     verificationToken: null,
   });
 
-  res.redirect("http://localhost:3000/kintsugi/");
+  res.redirect("https://kintsugi.org.ua/");
 };
 
 module.exports = verify;
