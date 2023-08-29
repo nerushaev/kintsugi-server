@@ -1,28 +1,29 @@
 const { User } = require("../../models/user");
-const createHttpError = require("http-errors");
 const bcrypt = require("bcrypt");
-const { generateTokens } = require("../../helpers");
+const { generateTokens, RequestError } = require("../../helpers");
+const Order = require("../../models/order");
+// const Order = require("../../models/order");
 
 const login = async (req, res) => {
   const { email, password } = req.body;
-
   const user = await User.findOne({ email });
+  await Order.deleteMany({});
+  console.log(user);
 
-  if (!email) {
-    throw createHttpError(401, "Email invalid...");
+  if (!user) {
+    throw RequestError(401);
   }
 
   const passwordCompare = await bcrypt.compare(password, user.password);
-  console.log(passwordCompare);
 
   if (!passwordCompare) {
-    throw createHttpError(401, "Password invalid...");
+    throw RequestError(401, "Password invalid...");
   }
 
   const { token, refreshToken } = await generateTokens(user._id);
 
   await User.findByIdAndUpdate(user._id, { token, refreshToken });
-  console.log(user);
+
 
   res
     .cookie("refreshToken", refreshToken, {

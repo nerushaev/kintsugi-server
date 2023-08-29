@@ -57,6 +57,13 @@ const orderSchema = new Schema({
     type: String,
     required: [false],
   },
+  totalPrice: {
+    type: Number,
+  },
+  accepted: {
+    type: Boolean,
+    default: false,
+  }
 });
 
 const Order = model("order", orderSchema);

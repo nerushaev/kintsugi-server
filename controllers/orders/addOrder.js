@@ -3,8 +3,9 @@ const Product = require("../../models/product");
 const createWaybill = require("../../middleware/createWaybill");
 const Order = require("../../models/order");
 const { User } = require("../../models/user");
-const { RequestError } = require("../../helpers");
+// const { RequestError } = require("../../helpers");
 const { formatDate } = require("../../helpers");
+const moment = require('moment');
 
 const addOrder = async (req, res) => {
   // Проверяем зарегистрирован ли пользователь
@@ -17,6 +18,7 @@ const addOrder = async (req, res) => {
     recipientWarehouseIndex,
     warehouseRef,
   } = req.body;
+
   const user = await User.findOne({ email });
   // Создаём из массива обьектов массив айди
   const orderId = randomId(8, "aA0");
@@ -58,8 +60,7 @@ const addOrder = async (req, res) => {
     });
   }
 
-  const today = new Date();
-  const date = formatDate(today, "dd/mm/yy");
+  const date = moment().format('MMMM Do YYYY, h:mm:ss a');
 
   console.log(req.body);
 
@@ -76,7 +77,7 @@ const addOrder = async (req, res) => {
   console.log(data);
 
   if (data) {
-    await Order.create({ ...req.body, orderRef: data.data[0].IntDocNumber });
+    await Order.create({ ...req.body, orderRef: data.data[0].IntDocNumber, totalPrice, date });
     if (user) {
       await User.findByIdAndUpdate(user._id, {
         $push: {
@@ -91,7 +92,7 @@ const addOrder = async (req, res) => {
     }
   }
 
-  if (!user.delivery) {
+  if (user && !user.delivery) {
     console.log("a");
     await User.findOneAndUpdate(user._id, {
       $set: { delivery: deliveryData },

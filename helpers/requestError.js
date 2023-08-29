@@ -1,6 +1,6 @@
 const messages = {
-  400: "Bad Request",
-  401: "Unauthorized",
+  400: "Перевірьте правильність данних...",
+  401: "Такого користувача не існує...",
   403: "Forbbiden",
   404: "Not found",
   409: "Conflict",
