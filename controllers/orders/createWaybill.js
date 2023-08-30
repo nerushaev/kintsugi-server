@@ -7,18 +7,15 @@ const {
   NOVA_SENDER_ADDRESS_REF,
 } = process.env;
 const axios = require("axios");
-const { getStreetRef, createRecipient } = require("../helpers");
+const { getStreetRef, createRecipient } = require("../../helpers");
+const Order = require("../../models/order");
 
-const createWaybill = async (clientData) => {
-  const {
-    recipientWarehouseIndex,
-    products,
-    cityRef,
-    warehouseAddress,
-    // warehouseRef,
-    phone,
-    totalPrice,
-  } = clientData;
+const createWaybill = async (req, res) => {
+  const { orderId } = req.body;
+  const order = await Order.find({ orderId });
+
+  const { recipientWarehouseIndex, products, cityRef, phone, totalPrice, _id } =
+    order[0];
 
   const resultDescription = products.map((item) => {
     return item.name;
@@ -34,21 +31,17 @@ const createWaybill = async (clientData) => {
 
   const dataNow = new Date().toLocaleString("ua", options);
 
-  const streetAddress = warehouseAddress.split(", ");
-  console.log("streetAddress", streetAddress);
-
-  try {
-    const recipient = await createRecipient(clientData);
-    // const street = await getStreetRef(cityRef, streetAddress[0]);
-
-    // console.log(cityRef);
-    // const streetRef = await street.data[0].Ref;
-
-    const data = await createWaybill(recipient);
-    return data;
-  } catch (error) {
-    console.log(error);
+  const recipient = await createRecipient(order[0]);
+  const data = await createWaybill(recipient);
+  console.log(data);
+  if (data) {
+    await Order.findByIdAndUpdate({_id}, {$set: {orderRef: data.data[0].IntDocNumber}});
+    await Order.findByIdAndUpdate({_id}, {accepted: true});
   }
+
+  res.status(201).json({
+    message: "Накладна успішно створена!",
+  });
 
   async function createWaybill(recipient) {
     const { data } = await axios.post("https://api.novaposhta.ua/v2.0/json/", {
@@ -79,7 +72,6 @@ const createWaybill = async (clientData) => {
         RecipientsPhone: phone,
       },
     });
-
     return data;
   }
 };

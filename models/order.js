@@ -63,6 +63,9 @@ const orderSchema = new Schema({
   accepted: {
     type: Boolean,
     default: false,
+  },
+  orderId: {
+    type: String,
   }
 });
 

@@ -1,14 +1,11 @@
 const randomId = require("random-id");
 const Product = require("../../models/product");
-const createWaybill = require("../../middleware/createWaybill");
 const Order = require("../../models/order");
 const { User } = require("../../models/user");
 // const { RequestError } = require("../../helpers");
-const { formatDate } = require("../../helpers");
-const moment = require('moment');
+const moment = require("moment");
 
 const addOrder = async (req, res) => {
-  // Проверяем зарегистрирован ли пользователь
   const {
     email,
     city,
@@ -60,9 +57,9 @@ const addOrder = async (req, res) => {
     });
   }
 
-  const date = moment().format('MMMM Do YYYY, h:mm:ss a');
-
-  console.log(req.body);
+  const dateDMY = moment().format("l");
+  const dateHM = moment().format("LT");
+  const date = dateDMY + `${"|"}` + dateHM;
 
   const deliveryData = {
     city,
@@ -73,44 +70,35 @@ const addOrder = async (req, res) => {
     warehouseRef,
   };
 
-  const data = await createWaybill({ ...req.body, totalPrice });
-  console.log(data);
+  await Order.create({
+    ...req.body,
+    orderId,
+    totalPrice,
+    date,
+    email: user.email,
+  });
 
-  if (data) {
-    await Order.create({ ...req.body, orderRef: data.data[0].IntDocNumber, totalPrice, date });
-    if (user) {
-      await User.findByIdAndUpdate(user._id, {
-        $push: {
-          orders: {
-            products: [...products],
-            orderRef: data.data[0].IntDocNumber,
-            date,
-            totalPrice,
-          },
+  if (user) {
+    await User.findByIdAndUpdate(user._id, {
+      $push: {
+        orders: {
+          products: [...products],
+          date,
+          totalPrice,
         },
-      });
-    }
+      },
+    });
   }
 
   if (user && !user.delivery) {
-    console.log("a");
     await User.findOneAndUpdate(user._id, {
       $set: { delivery: deliveryData },
     });
   }
 
-  if (data.success) {
-    res.status(201).json({
-      message: "Накладна успішно створена!",
-      result: {
-        data,
-      },
-    });
-  } else {
-    res.status(409).json({
-      message: "Щось пішло не так, перевірьте правильність данних!",
-    });
-  }
+  res.status(201).json({
+    message: "Замовлення прийнято!",
+  });
 };
 
 module.exports = addOrder;
