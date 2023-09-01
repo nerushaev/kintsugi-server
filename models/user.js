@@ -72,6 +72,7 @@ const registerSchema = Joi.object({
   phone: Joi.string()
     .pattern(/^\+380\d{9}$/)
     .required(),
+  gReCaptchaToken: Joi.string(),
 });
 
 const loginSchema = Joi.object({

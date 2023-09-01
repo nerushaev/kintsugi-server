@@ -4,11 +4,28 @@ const bcrypt = require("bcrypt");
 const randomId = require("random-id");
 const { transport } = require("../../middleware");
 const { generateTokens } = require("../../helpers");
-const { KINTSUGI_GMAIL, BASE_BACKEND_URL } = process.env;
-// const gravatar = require("gravatar");
+const { default: axios } = require("axios");
+const { KINTSUGI_GMAIL, BASE_BACKEND_URL, RECAPTCHA_SECRET_KEY } = process.env;
+
 
 const register = async (req, res) => {
-  const { email, password, phone } = req.body;
+  const { email, password, phone, gReCaptchaToken } = req.body;
+  console.log(gReCaptchaToken);
+
+  let valid = false;
+
+  await axios.get(`https://www.google.com/recaptcha/api/siteverify?secret=${RECAPTCHA_SECRET_KEY}&response=${gReCaptchaToken}`).then(res =>  {
+    const {success, action, score} = res.data;
+    console.log(score);
+    if(success && score >= 0.6 && action === "registerForm") {
+      return valid = true;
+    } else {
+      res.status(423).json({
+        message: "Your are robot!"
+      })
+    }
+  })
+
 
   const duplicateEmail = await User.findOne({ email });
   const duplicatePhone = await User.findOne({ phone });
