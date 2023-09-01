@@ -7,7 +7,6 @@ const Order = require("../../models/order");
 const login = async (req, res) => {
   const { email, password } = req.body;
   const user = await User.findOne({ email });
-  await Order.deleteMany({});
   console.log(user);
 
   if (!user) {
