@@ -26,10 +26,14 @@ const refresh = async (req, res) => {
     refreshToken: tokens.refreshToken,
   });
 
-  res.cookie("refreshToken", tokens.refreshToken, {
+  res
+  .cookie("refreshToken", refreshToken, {
+    sameSite: "None",
     httpOnly: true,
+    secure: true,
+    domain: "kintsugi.org.ua",
     maxAge: 30 * 24 * 60 * 60 * 1000,
-  });
+  })
 
   res.json({
     token: tokens.token,

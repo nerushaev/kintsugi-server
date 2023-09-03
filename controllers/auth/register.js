@@ -69,13 +69,15 @@ const register = async (req, res) => {
   };
 
   await transport.sendMail(verifyEmail);
-
-  res.cookie("refreshToken", refreshToken, {
-    httpOnly: true,
+  
+  res
+  .cookie("refreshToken", refreshToken, {
     sameSite: "None",
+    httpOnly: true,
     secure: true,
+    domain: "kintsugi.org.ua",
     maxAge: 30 * 24 * 60 * 60 * 1000,
-  });
+  })
 
   res.status(201).json({
     status: 201,
