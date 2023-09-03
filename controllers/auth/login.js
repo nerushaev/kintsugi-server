@@ -1,7 +1,6 @@
 const { User } = require("../../models/user");
 const bcrypt = require("bcrypt");
 const { generateTokens, RequestError } = require("../../helpers");
-const Order = require("../../models/order");
 // const Order = require("../../models/order");
 
 const login = async (req, res) => {
@@ -26,8 +25,10 @@ const login = async (req, res) => {
 
   res
     .cookie("refreshToken", refreshToken, {
-      httpOnly: false,
+      httpOnly: true,
+      secure: true,
       maxAge: 30 * 24 * 60 * 60 * 1000,
+      sameSite: false,
     })
     .json({
       token,
