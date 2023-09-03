@@ -25,11 +25,11 @@ const login = async (req, res) => {
 
   res
     .cookie("refreshToken", refreshToken, {
+      sameSite: "None",
       httpOnly: true,
       secure: true,
       maxAge: 30 * 24 * 60 * 60 * 1000,
-      sameSite: "None",
-      domain: "https://kintsugi.org.ua/login",
+      domain: "kintsugi.org.ua",
     })
     .json({
       token,
