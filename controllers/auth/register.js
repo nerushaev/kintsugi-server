@@ -72,7 +72,7 @@ const register = async (req, res) => {
 
   res.cookie("refreshToken", refreshToken, {
     httpOnly: true,
-    sameSite: false,
+    sameSite: "None",
     secure: true,
     maxAge: 30 * 24 * 60 * 60 * 1000,
   });
