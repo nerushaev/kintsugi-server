@@ -71,7 +71,7 @@ const register = async (req, res) => {
   await transport.sendMail(verifyEmail);
 
   res.cookie("refreshToken", refreshToken, {
-    httpOnly: true,
+    httpOnly: false,
     sameSite: "None",
     secure: true,
     maxAge: 30 * 24 * 60 * 60 * 1000,
