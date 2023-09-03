@@ -6,6 +6,7 @@ const cookieParser = require("cookie-parser");
 const cors = require("cors");
 
 const origin = "https://kintsugi.org.ua";
+// const origin = "http://localhost:3000";
 
 // const origin =
 //   process.env.NODE_ENV === "development"
@@ -27,6 +28,8 @@ app.use(
     origin,
   })
 );
+
+app.set("trust proxy", 1);
 
 app.use(logger(formatsLogger));
 app.use(bodyParser.urlencoded({ extended: true }));
