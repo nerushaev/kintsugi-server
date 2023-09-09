@@ -1,4 +1,4 @@
-const { Schema, model } = require('mongoose');
+const { Schema, model } = require("mongoose");
 
 const productSchema = new Schema({
   name: {
@@ -27,8 +27,11 @@ const productSchema = new Schema({
   comingSoon: {
     type: String,
   },
-  size:{type: Array,
-default: ["-"]}
+  size: { type: Array, default: ["-"] },
+  sizeInformation: {
+    type: String,
+  },
+  tags: {type: Array}
 });
 
 const Product = model("product", productSchema);

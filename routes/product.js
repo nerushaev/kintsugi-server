@@ -26,7 +26,7 @@ router.post(
 
 router.put(
   "/:productId",
-  validateMiddleware,
+  // validateMiddleware,
   ctrlWrapper(productCtrl.updateProductById)
 );
 

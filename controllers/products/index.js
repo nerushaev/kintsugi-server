@@ -6,6 +6,7 @@ const updateProductById = require("./updateProductById");
 const getAllProducts = require("./getAllProducts");
 const getComingSoonProducts = require("./getComingSoonProducts");
 const getProductsByName = require("./getProductsByName");
+const updateSizeProduct = require("./updateSizeProduct");
 
 module.exports = {
   getProducts,
@@ -16,4 +17,5 @@ module.exports = {
   getAllProducts,
   getComingSoonProducts,
   getProductsByName,
+  updateSizeProduct,
 };
