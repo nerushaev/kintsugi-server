@@ -20,13 +20,12 @@ router.delete("/:productId", ctrlWrapper(productCtrl.removeProductById));
 router.post(
   "/",
   upload.array("image"),
-  validateMiddleware,
+  // validateMiddleware,
   ctrlWrapper(productCtrl.addProduct)
 );
 
 router.put(
   "/:productId",
-  // validateMiddleware,
   ctrlWrapper(productCtrl.updateProductById)
 );
 

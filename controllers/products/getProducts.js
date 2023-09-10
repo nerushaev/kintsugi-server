@@ -7,11 +7,10 @@ const getProducts = async (req, res) => {
   const categoryFilters = allCategories.filter(cat => cat !== 'low' && cat !== 'high');
   
   if (categoryFilters.length === 0) {
-    categoryFilters.push('wigs', 'costume', 'accessories', 'smallStand', 'bigStand', 'pendant', 'pin', 'hairpins', 'earrings', 'tapestries', 'other');
+    categoryFilters.push('Перуки', 'Костюми', 'Аксессури', 'Маленькі стенди', 'Великі стенди', 'Підвіски', 'Піни', 'Шпильки', 'Сережки', 'Гобелени', 'Інше');
   }
 
   const query = {
-    comingSoon: { $exists: false }
   };
 
   if (categoryFilters.length > 0) {
@@ -37,7 +36,9 @@ const getProducts = async (req, res) => {
     .limit(limit * 1)
     .skip((page - 1) * limit)
     .exec();
+
   
+
   res.json({
     products,
     totalPages: Math.ceil(count / limit),
