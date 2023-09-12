@@ -7,7 +7,7 @@ const getProducts = async (req, res) => {
   const categoryFilters = allCategories.filter(cat => cat !== 'low' && cat !== 'high');
   
   if (categoryFilters.length === 0) {
-    categoryFilters.push('Перуки', 'Костюми', 'Аксессури', 'Маленькі стенди', 'Великі стенди', 'Підвіски', 'Піни', 'Шпильки', 'Сережки', 'Гобелени', 'Інше');
+    categoryFilters.push('wigs', 'costume', 'accessories', 'smallStand', 'bigStand', 'pendant', 'pin', 'hairpins', 'earrings', 'tapestries', 'other');
   }
 
   const query = {
