@@ -5,8 +5,8 @@ require("dotenv").config();
 const cookieParser = require("cookie-parser");
 const cors = require("cors");
 
-const origin = "https://kintsugi.org.ua";
-// const origin = "http://127.0.0.1:5173";
+// const origin = "https://kintsugi.org.ua";
+const origin = "http://127.0.0.1:5173";
 
 // const origin =
 //   process.env.NODE_ENV === "development"

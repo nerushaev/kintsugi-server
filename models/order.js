@@ -66,6 +66,9 @@ const orderSchema = new Schema({
   },
   orderId: {
     type: String,
+  },
+  status: {
+    type: String,
   }
 });
 
