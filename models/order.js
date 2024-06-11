@@ -9,6 +9,10 @@ const orderSchema = new Schema({
     type: String,
     required: [true, "Set name"],
   },
+  email: {
+    type: String,
+    require: [true, "Set email"],
+  },
   phone: {
     type: String,
     required: [true, "Set phone!"],

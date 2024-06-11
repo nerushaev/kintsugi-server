@@ -23,8 +23,8 @@ const createSignature = (req, res) => {
       currency: "UAH",
       description: "Придбання товару",
       order_id: orderId,
-      result_url: "https:/kintsugi.org.ua/user",
-      server_url: "https:/api.kintsugi.org.ua/api/orders/liqpay",
+      result_url: "https://kintsugi.org.ua/user",
+      server_url: "https://api.kintsugi.org.ua/api/orders/liqpay",
     }
 
     const jsonStr = JSON.stringify(dataObj); 

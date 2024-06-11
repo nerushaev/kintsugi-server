@@ -17,7 +17,8 @@ const liqpay = async(req,res) => {
   const {order_id, status} = encodeDataObj;
 
   await Order.updateOne({orderId: order_id}, {$set: {payment: status}});
-  const orderInfo = Order.findOne({orderId: order_id});
+  const orderInfo = await Order.find({orderId: order_id});
+  console.log(orderInfo);
   const {email} = orderInfo;
 
   const userLiqpayEmail = {

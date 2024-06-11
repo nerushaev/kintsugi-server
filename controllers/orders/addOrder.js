@@ -157,7 +157,8 @@ const addOrder = async (req, res) => {
 
   res.status(201).json({
     message: "Замовлення прийнято!",
-    orderId
+    orderId,
+    liqpay: liqpay
   });
 };
 
