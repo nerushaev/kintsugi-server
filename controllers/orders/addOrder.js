@@ -1,13 +1,10 @@
-const randomId = require("random-id");
 const Product = require("../../models/product");
 const Order = require("../../models/order");
 const { User } = require("../../models/user");
-// const { RequestError } = require("../../helpers");
 const moment = require("moment");
-const {PRIVATE_LIQPAY_KEY} = process.env;
 const RandExp = require('randexp');
-const crypto = require('crypto');
-const { default: axios } = require("axios");
+const KINTSUGI_GMAIL = process.env;
+const {transport} = require('../../middleware');
 
 const addOrder = async (req, res) => {
   const {
@@ -19,7 +16,8 @@ const addOrder = async (req, res) => {
     recipientWarehouseIndex,
     warehouseRef,
     liqpay,
-    cash,
+    phone,
+    name
   } = req.body;
 
   const user = await User.findOne({ email });
@@ -76,51 +74,27 @@ const addOrder = async (req, res) => {
     warehouseRef,
   };
 
-  console.log(liqpay);
+  if(liqpay) {
+    await Order.create({
+      ...req.body,
+      orderId,
+      totalPrice,
+      date,
+      email: user.email,
+      payment: "unpaid"
+    });
+  } else {
+    await Order.create({
+      ...req.body,
+      orderId,
+      totalPrice,
+      date,
+      email: user.email,
+      payment: "Наложка"
+    });
+  }
 
-  // if(liqpay) {
 
-  //   // const items = products.map((item) => {
-
-  //   //   return {
-
-  //   //   }
-  //   // });
-
-  //   const dataObj = {
-  //     version: 3,
-  //     public_key: "sandbox_i41941011705",
-  //     private_key: PRIVATE_LIQPAY_KEY,
-  //     action: "pay",
-  //     amount: totalPrice,
-  //     currency: "UAH",
-  //     description: "Придбання товару",
-  //     order_id: orderId,
-  //   }
-
-  //   const jsonStr = JSON.stringify(dataObj); 
-  //   const buff = new Buffer.from(jsonStr, 'utf-8');
-  //   const data = buff.toString('base64');
-    
-  //   const sign_string = PRIVATE_LIQPAY_KEY + data + PRIVATE_LIQPAY_KEY;
-  //   const sha1Hash = crypto.createHash('sha1').update(sign_string, 'utf-8').digest();
-  //   const signature = sha1Hash.toString('base64');
-
-  //   const result = await axios.post("https://www.liqpay.ua/api/request", (`&data=${data}&signature=${signature}`));
-  //   console.log(result);
-  //   console.log(data);
-  //   console.log(signature);
-
-    
-  // }
-
-  await Order.create({
-    ...req.body,
-    orderId,
-    totalPrice,
-    date,
-    email: user.email,
-  });
 
   if (user) {
     await User.findByIdAndUpdate(user._id, {
@@ -139,6 +113,47 @@ const addOrder = async (req, res) => {
       $set: { delivery: deliveryData },
     });
   }
+
+  const userOrderMessage = {
+    from: KINTSUGI_GMAIL,
+    to: email,
+    subject: "Ви зробили замовлення в косплей магазині Kintsugi!",
+    html: `<h2>Ваше замовлення ${orderId}</h2>
+            <h3>Деталі замовлення:</h3>
+            ${products.map(item => {
+              return `<img src=${item.image[0]} referrerpolicy="no-referrer"  />
+                      <p>${item.name}</p>
+                      <p>Ціна: ${item.price}грн</p>
+              `
+            })}
+            <h3>Загальна сума: ${totalPrice}грн</h3>
+    `,
+  }
+
+  const adminOrderMessage = {
+    from: KINTSUGI_GMAIL,
+    to: email,
+    subject: "Нове замовлення!",
+    html: `<h2>Номер замовлення ${orderId}</h2>
+            <h3>Інформація про покупця</h3>
+            <p>Ім'я: ${name}</p>
+            <p>Пошта: ${email}</p>
+            <p>Телефон: ${phone}</p>
+            <p>Місто: ${city}</p>
+            <p>Відділення: ${warehouse}</p>
+            <h3>Деталі замовлення:</h3>
+            ${products.map(item => {
+              return `<img src=${item.image[0]} referrerpolicy="no-referrer"  />
+                      <p>${item.name}</p>
+                      <p>Ціна: ${item.price}грн</p>
+              `
+            })}
+            <h3>Загальна сума: ${totalPrice}грн</h3>
+    `,
+  }
+
+  await transport.sendMail(adminOrderMessage);
+  await transport.sendMail(userOrderMessage);
 
   res.status(201).json({
     message: "Замовлення прийнято!",

@@ -60,9 +60,9 @@ const orderSchema = new Schema({
   totalPrice: {
     type: Number,
   },
-  accepted: {
-    type: Boolean,
-    default: false,
+  payment: {
+    type: String,
+    default: "unpaid",
   },
   orderId: {
     type: String,
