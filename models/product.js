@@ -31,7 +31,17 @@ const productSchema = new Schema({
   sizeInformation: {
     type: String,
   },
-  tags: {type: Array}
+  tags: {
+    type: Array
+  },
+  score: {
+    type: Number,
+    default: 0
+  },
+  scoreAmount: {
+    type: Number,
+    default: 0
+  },
 });
 
 const Product = model("product", productSchema);

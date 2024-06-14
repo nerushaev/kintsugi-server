@@ -19,6 +19,14 @@ const addProduct = async (req, res) => {
     urls.push(newPath);
     fs.unlink(path);
   }
+
+  const {name} = req.body;
+
+  const result = await Product.find({name});
+
+  if(result) {
+    return res.status(400).send('Товар з такою назвою вже існує!');
+  }
   
   try {
     const product = await Product.create({ ...req.body, image: urls });

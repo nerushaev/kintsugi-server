@@ -17,7 +17,7 @@ const addOrder = async (req, res) => {
     warehouseRef,
     liqpay,
     phone,
-    name
+    name,
   } = req.body;
 
   const user = await User.findOne({ email });
@@ -74,6 +74,8 @@ const addOrder = async (req, res) => {
     warehouseRef,
   };
 
+  console.log(deliveryData);
+
   if(liqpay) {
     await Order.create({
       ...req.body,
@@ -94,8 +96,6 @@ const addOrder = async (req, res) => {
     });
   }
 
-
-
   if (user) {
     await User.findByIdAndUpdate(user._id, {
       $push: {
@@ -108,7 +108,7 @@ const addOrder = async (req, res) => {
     });
   }
 
-  if (user && !user.delivery) {
+  if (user) {
     await User.findOneAndUpdate(user._id, {
       $set: { delivery: deliveryData },
     });
