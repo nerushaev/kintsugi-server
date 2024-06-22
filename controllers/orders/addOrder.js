@@ -15,10 +15,12 @@ const addOrder = async (req, res) => {
     warehouseAddress,
     recipientWarehouseIndex,
     warehouseRef,
-    liqpay,
+    payments,
     phone,
     name,
   } = req.body;
+
+  const liqpay = payments === 'liqpay' ? true : false;
 
   const user = await User.findOne({ email });
   // Создаём из массива обьектов массив айди

@@ -28,7 +28,7 @@ const restorePass = async (req, res) => {
 
   await transport.sendMail(newPasswordEmail);
 
-  res.json({ message: "New password email sent" });
+  res.json({ message: "Новий пароль надіслано..." });
 };
 
 module.exports = restorePass;

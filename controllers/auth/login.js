@@ -15,7 +15,7 @@ const login = async (req, res) => {
   const passwordCompare = await bcrypt.compare(password, user.password);
 
   if (!passwordCompare) {
-    throw RequestError(401, "Password invalid...");
+    throw RequestError(401, "Невірний пароль...");
   }
 
   const { token, refreshToken } = await generateTokens(user._id);

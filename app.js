@@ -17,6 +17,7 @@ const origin = "https://kintsugi.org.ua";
 const productsRouter = require("./routes/product");
 const authRouter = require("./routes/auth");
 const orderRouter = require("./routes/order");
+const feedbackRouter = require("./routes/feedback");
 
 const app = express();
 
@@ -40,6 +41,8 @@ app.use(cookieParser());
 app.use("/api/auth/", authRouter);
 app.use("/api/products/", productsRouter);
 app.use("/api/orders/", orderRouter);
+app.use("/api/feedback/", feedbackRouter);
+
 app.use((req, res) => {
   res.status(404).json({ message: "Not found" });
 });

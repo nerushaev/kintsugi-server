@@ -37,20 +37,8 @@ const orderSchema = new Schema({
     type: Array,
     required: [true, "Set products"],
   },
-  nova: {
-    type: Boolean,
-    required: [true, "Set options!"],
-  },
-  afina: {
-    type: Boolean,
-    required: [true, "Set options!"],
-  },
-  cash: {
-    type: Boolean,
-    required: [true, "Set options!"],
-  },
-  liqpay: {
-    type: Boolean,
+  payments: {
+    type: String,
     required: [true, "Set options!"],
   },
   password: {

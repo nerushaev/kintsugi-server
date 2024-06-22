@@ -1,7 +1,7 @@
 const Product = require('../../models/product');
 
 const getProducts = async (req, res) => {
-  const { page = 1, limit = 12, category, search } = req.query;
+  const { page = 1, limit = 15, category, search } = req.query;
   const allCategories = category ? category.split(",") : [];
   const priceFilter = allCategories.includes('low') ? 'low' : allCategories.includes('high') ? 'high' : null;
   const categoryFilters = allCategories.filter(cat => cat !== 'low' && cat !== 'high');
