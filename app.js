@@ -18,6 +18,7 @@ const productsRouter = require("./routes/product");
 const authRouter = require("./routes/auth");
 const orderRouter = require("./routes/order");
 const feedbackRouter = require("./routes/feedback");
+const posterRouter = require("./routes/poster");
 
 const app = express();
 
@@ -42,6 +43,7 @@ app.use("/api/auth/", authRouter);
 app.use("/api/products/", productsRouter);
 app.use("/api/orders/", orderRouter);
 app.use("/api/feedback/", feedbackRouter);
+app.use("/api/poster/", posterRouter);
 
 app.use((req, res) => {
   res.status(404).json({ message: "Not found" });
