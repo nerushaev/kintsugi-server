@@ -1,48 +1,55 @@
 const { Schema, model } = require("mongoose");
 
 const productSchema = new Schema({
-  name: {
+  product_name: {
     type: String,
     // required: [true, "Set name for product!"],
   },
-  category: {
+  category_name: {
     type: String,
     // required: true,
   },
-  amount: {
-    type: Number,
-    // required: true,
-  },
-  image: {
-    type: Array,
-  },
-  description: {
+  menu_category_id: {
     type: String,
     // required: true,
   },
-  price: {
-    type: Number,
+  photo: {
+    type: String,
     // required: true,
   },
-  comingSoon: {
+  photo_origin: {
+    type: String,
+    // required: true,
+  },
+  product_id: {
     type: String,
   },
-  size: { type: Array, default: ["-"] },
-  sizeInformation: {
-    type: String,
+  price: { 
+    type: Number
   },
-  tags: {
-    type: Array
+  barcode: {
+    type: String,
   },
   score: {
     type: Number,
-    default: 0
+    default: 0,
   },
   scoreAmount: {
     type: Number,
-    default: 0
+    default: 0,
   },
+  description: {
+    type: String,
+  },
+  photo_extra: {
+    type: Array,
+  },
+  hidden: {
+    type: String,
+  }
 });
+
+productSchema.index({product_name: 'text'});
 
 const Product = model("product", productSchema);
 
