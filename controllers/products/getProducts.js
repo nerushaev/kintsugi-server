@@ -71,7 +71,7 @@ const getProducts = async (req, res) => {
   res.json({
     products,
     totalPages: Math.ceil(count / limit),
-    currentPage: page,
+    currentPage: Number(page),
     message: "okay"
   });
 };

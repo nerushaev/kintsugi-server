@@ -1,11 +1,9 @@
 const Feedback = require('../../models/feedback');
 
 const getFeedback = async (req, res) => {
-  const productId = req.params;
-  console.log(productId);
+  const product_id = req.params;
 
-  const result = await Feedback.find({...productId});
-  console.log(result);
+  const result = await Feedback.find({...product_id});
   res.json(result);
 };
 

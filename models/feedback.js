@@ -5,7 +5,7 @@ const feedbackSchema = new Schema({
     type: String,
     require: true,
   },
-  productId: {
+  product_id: {
     type: String,
     require: true,
   },

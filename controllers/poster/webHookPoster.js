@@ -53,7 +53,7 @@ if(postData.data) {
         menu_category_id,
         photo,
         photo_origin,
-        price,
+        price: Number(price[1]),
         barcode,
         hidden
       });
@@ -64,8 +64,8 @@ if(postData.data) {
       }
       
        if (postData.action === "changed") {
-         const {data} = await axios.get(`${POSTER_URL_API}/menu.getProduct?token=${POSTER_ACCESS_TOKEN}&product_id=${postData.object_id}`);
-         const {
+        const {data} = await axios.get(`${POSTER_URL_API}/menu.getProduct?token=${POSTER_ACCESS_TOKEN}&product_id=${postData.object_id}`);
+        const {
         product_name,
         category_name,
         product_id,
@@ -83,7 +83,7 @@ if(postData.data) {
         menu_category_id,
         photo,
         photo_origin,
-        price,
+        price: Number(price[1]),
         barcode,
         hidden
       }, {$new: true});

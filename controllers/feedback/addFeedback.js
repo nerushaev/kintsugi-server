@@ -2,8 +2,7 @@ const Feedback = require('../../models/feedback');
 const Product = require('../../models/product');
 
 const addFeedback = async (req, res) => {
-  const {productId} = req.body;
-
+  const {product_id} = req.body;
   const result = await Feedback.create({
     ...req.body,
   });
@@ -25,11 +24,10 @@ const addFeedback = async (req, res) => {
     }
   }
 
-  const data = await Product.findById(productId);
-
+  const data = await Product.findOne({product_id: product_id});
   const newScoreData = makeNewScore(data);
 
-  const newScoreResult = await Product.findByIdAndUpdate(productId,
+  const newScoreResult = await Product.findOneAndUpdate({product_id: product_id},
     {...newScoreData,}
   )
 
