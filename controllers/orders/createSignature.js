@@ -16,7 +16,7 @@ const createSignature = (req, res) => {
 
     const dataObj = {
       version: 3,
-      public_key: "sandbox_i29680799162",
+      public_key: "sandbox_i41941011705",
       private_key: PRIVATE_LIQPAY_KEY,
       action: "pay",
       amount: products[0].price,
@@ -35,11 +35,11 @@ const createSignature = (req, res) => {
     const sha1Hash = crypto.createHash('sha1').update(sign_string, 'utf-8').digest();
     const signature = sha1Hash.toString('base64');
 
-    res.json({
+    return {
       data: data,
       signature: signature,
       orderId: orderId
-    })
+    }
 }
 
 module.exports = createSignature;

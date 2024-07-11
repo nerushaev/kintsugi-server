@@ -46,7 +46,10 @@ const productSchema = new Schema({
   },
   hidden: {
     type: String,
-  }
+  },
+  modifications: {
+    type: Array,
+  },
 });
 
 productSchema.index({product_name: 'text'});

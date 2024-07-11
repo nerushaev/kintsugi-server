@@ -20,6 +20,9 @@ const feedbackSchema = new Schema({
   email: {
     type: String,
     require: true,
+  },
+  date: {
+    type: String,
   }
 });
 

@@ -3,10 +3,12 @@ const Product = require('../../models/product');
 
 const addFeedback = async (req, res) => {
   const {product_id} = req.body;
+
   const result = await Feedback.create({
     ...req.body,
   });
 
+  console.log(req.body);
   const makeNewScore = (data) => {
     const {score, scoreAmount} = data;
     if (scoreAmount === 0) {
@@ -30,8 +32,6 @@ const addFeedback = async (req, res) => {
   const newScoreResult = await Product.findOneAndUpdate({product_id: product_id},
     {...newScoreData,}
   )
-
-  console.log(newScoreResult);
 
   res.status(201).json({result});
 }
