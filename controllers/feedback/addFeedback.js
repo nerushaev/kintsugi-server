@@ -8,7 +8,7 @@ const addFeedback = async (req, res) => {
     ...req.body,
   });
 
-  console.log(req.body);
+
   const makeNewScore = (data) => {
     const {score, scoreAmount} = data;
     if (scoreAmount === 0) {

@@ -11,6 +11,8 @@ router.get("/", productCtrl.getProducts);
 
 router.get("/all", ctrlWrapper(productCtrl.getAllProducts));
 
+router.get("/getNames", ctrlWrapper(productCtrl.getAllProductsName));
+
 router.get("/comingSoon", ctrlWrapper(productCtrl.getComingSoonProducts));
 
 router.get("/:_id", ctrlWrapper(productCtrl.getProductById));
@@ -25,7 +27,8 @@ router.post(
 );
 
 router.put(
-  "/:productId",
+  "/:product_id",
+  upload.array("photo_extra"),
   ctrlWrapper(productCtrl.updateProductById)
 );
 
