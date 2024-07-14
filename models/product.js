@@ -50,6 +50,9 @@ const productSchema = new Schema({
   modifications: {
     type: Array,
   },
+  amount: {
+    type: Number,
+  }
 });
 
 productSchema.index({product_name: 'text'});
