@@ -61,6 +61,9 @@ const userSchema = new Schema(
     avatarURL: {
       type: String,
     },
+    wishes: {
+      type: Array
+    }
   },
   { versionKey: false, timestampts: true }
 );

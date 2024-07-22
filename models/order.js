@@ -19,19 +19,19 @@ const orderSchema = new Schema({
   },
   city: {
     type: String,
-    required: [true, "Set city name"],
+    // required: [true, "Set city name"],
   },
   cityRef: {
     type: String,
-    required: [true, "Set cityRef!"],
+    // required: [true, "Set cityRef!"],
   },
   warehouse: {
     type: String,
-    required: [true, "Set warehouse name"],
+    // required: [true, "Set warehouse name"],
   },
   recipientWarehouseIndex: {
     type: String,
-    required: [true, "Set RecipientWarehouseIndex!"],
+    // required: [true, "Set RecipientWarehouseIndex!"],
   },
   products: {
     type: Array,
@@ -52,14 +52,13 @@ const orderSchema = new Schema({
   totalPrice: {
     type: Number,
   },
-  payment: {
-    type: String,
-    default: "unpaid",
-  },
   orderId: {
     type: String,
   },
   status: {
+    type: String,
+  },
+  delivery: {
     type: String,
   }
 });

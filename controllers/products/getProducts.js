@@ -2,8 +2,10 @@ const { default: axios } = require("axios");
 const Order = require("../../models/order");
 const Product = require("../../models/product");
 const { POSTER_URL_API, POSTER_ACCESS_TOKEN } = process.env;
+
 const getProducts = async (req, res) => {
-  const { page = 1, limit = 15, category, search, price } = req.query;
+  const { page = 1, limit = 20, category, search, price } = req.query;
+  // await Order.deleteMany({});
   // await Product.deleteMany({});
 
   // const { data } = await axios.get(

@@ -37,6 +37,9 @@ router.patch("/updateUser", authenticate, ctrlWrapper(authCtrl.updateUser));
 
 router.patch("/restore", ctrlWrapper(authCtrl.restorePass));
 
+router.patch("/addToWish", authenticate, ctrlWrapper(authCtrl.addToWishList));
+router.patch("/removeFromWish", authenticate, ctrlWrapper(authCtrl.removeFromWish));
+
 router.patch(
   "/changePassword",
   authenticate,

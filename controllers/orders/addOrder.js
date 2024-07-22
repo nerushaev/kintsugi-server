@@ -15,10 +15,12 @@ const addOrder = async (req, res) => {
     warehouseAddress,
     recipientWarehouseIndex,
     warehouseRef,
-    payments,
     phone,
     name,
+    delivery,
   } = req.body;
+
+  console.log(req.body);
 
   const user = await User.findOne({ email });
   // Создаём из массива обьектов массив айди
@@ -47,17 +49,6 @@ const addOrder = async (req, res) => {
     warehouseRef,
   };
 
-  await Order.create({
-    ...req.body,
-    orderId,
-    totalPrice,
-    date: DateFormat,
-    email: user.email,
-    phone: user.phone,
-    payment: payments,
-    status: "Прийнято"
-  });
-
   if (user) {
     await User.findByIdAndUpdate(user._id, {
       $push: {
@@ -80,8 +71,7 @@ const addOrder = async (req, res) => {
             <h3>Деталі замовлення:</h3>
             ${products.map((item) => {
               return `<img src=${`https://kintsugi.joinposter.com${item.photo}`} referrerpolicy="no-referrer"  />
-                      <p>${item.name}</p>
-                      <p>${item.size}</p>
+                      <p>${item.product_name}</p>
                       <p>Ціна: ${item.price / 100}грн</p>
                       
               `;
@@ -99,18 +89,39 @@ const addOrder = async (req, res) => {
             <p>Ім'я: ${name}</p>
             <p>Пошта: ${email}</p>
             <p>Телефон: ${phone}</p>
-            <p>Місто: ${city}</p>
-            <p>Відділення: ${warehouse}</p>
+            <p>Доставка: ${delivery === "nova" ? "Новою поштою" : "Самовивіз"}</p>
+            ${city ? 
+            `<p>Місто: ${city}</p>`
+            :
+            ""
+            }
+            ${warehouse ? 
+            `<p>Відділення: ${warehouse}</p>`
+            :
+            ""
+            }
             <h3>Деталі замовлення:</h3>
             ${products.map((item) => {
               return `<img src=${`https://kintsugi.joinposter.com${item.photo}`} referrerpolicy="no-referrer"  />
-                      <p>${item.name}</p>
+                      <p>${item.product_name}</p>
+                      ${item.size ? `<p>${item.size}</p>` : ""}
                       <p>Ціна: ${item.price / 100}грн</p>
+                      <p>Кількість: ${item.amount}</p>
               `;
             })}
             <h3>Загальна сума: ${totalPrice}грн</h3>
     `,
   };
+
+  await Order.create({
+    ...req.body,
+    orderId,
+    totalPrice,
+    date: DateFormat,
+    email: email,
+    phone: phone,
+    status: "Прийнято"
+  });
 
   await transport.sendMail(adminOrderMessage);
   await transport.sendMail(userOrderMessage);

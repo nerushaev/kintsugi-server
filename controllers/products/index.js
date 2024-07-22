@@ -8,6 +8,7 @@ const getComingSoonProducts = require("./getComingSoonProducts");
 const getProductsByName = require("./getProductsByName");
 const updateSizeProduct = require("./updateSizeProduct");
 const getAllProductsName = require("./getAllProductsName");
+const getWishListProduct = require("./getWishListProduct");
 
 module.exports = {
   getProducts,
@@ -20,4 +21,5 @@ module.exports = {
   getProductsByName,
   updateSizeProduct,
   getAllProductsName,
+  getWishListProduct
 };

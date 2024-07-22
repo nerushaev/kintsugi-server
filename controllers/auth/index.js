@@ -9,7 +9,8 @@ const changePassword = require("./changePassword");
 const resendVerifyEmail = require("./resendVerifyEmail");
 const verify = require("./verify");
 const updateUser = require("./updateUser");
-
+const addToWishList = require('./addToWishList');
+const removeFromWish = require('./removeFromWish');
 module.exports = {
   register,
   login,
@@ -22,4 +23,6 @@ module.exports = {
   resendVerifyEmail,
   verify,
   updateUser,
+  addToWishList,
+  removeFromWish
 };
