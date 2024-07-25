@@ -5,6 +5,7 @@ const RandExp = require("randexp");
 const { KINTSUGI_GMAIL, PRIVATE_LIQPAY_KEY } = process.env;
 const { transport } = require("../../middleware");
 const crypto = require("crypto");
+const { monoPay } = require("../../helpers");
 
 const addOrder = async (req, res) => {
   const {
@@ -18,9 +19,8 @@ const addOrder = async (req, res) => {
     phone,
     name,
     delivery,
+    payments
   } = req.body;
-
-  console.log(req.body);
 
   const user = await User.findOne({ email });
   // Создаём из массива обьектов массив айди
@@ -89,17 +89,11 @@ const addOrder = async (req, res) => {
             <p>Ім'я: ${name}</p>
             <p>Пошта: ${email}</p>
             <p>Телефон: ${phone}</p>
-            <p>Доставка: ${delivery === "nova" ? "Новою поштою" : "Самовивіз"}</p>
-            ${city ? 
-            `<p>Місто: ${city}</p>`
-            :
-            ""
-            }
-            ${warehouse ? 
-            `<p>Відділення: ${warehouse}</p>`
-            :
-            ""
-            }
+            <p>Доставка: ${
+              delivery === "nova" ? "Новою поштою" : "Самовивіз"
+            }</p>
+            ${city ? `<p>Місто: ${city}</p>` : ""}
+            ${warehouse ? `<p>Відділення: ${warehouse}</p>` : ""}
             <h3>Деталі замовлення:</h3>
             ${products.map((item) => {
               return `<img src=${`https://kintsugi.joinposter.com${item.photo}`} referrerpolicy="no-referrer"  />
@@ -120,11 +114,30 @@ const addOrder = async (req, res) => {
     date: DateFormat,
     email: email,
     phone: phone,
-    status: "Прийнято"
+    status: "Прийнято",
   });
 
-  await transport.sendMail(adminOrderMessage);
-  await transport.sendMail(userOrderMessage);
+  // await transport.sendMail(adminOrderMessage);
+  // await transport.sendMail(userOrderMessage);
+
+  if (payments === "card") {
+    const result = await monoPay({amount: totalPrice * 100});
+    console.log(result);
+    const { invoiceId, pageUrl } = result;
+    await Order.findOneAndUpdate({orderId}, {$set: {
+      paymentId: invoiceId,
+      paymentStatus: "unpaid"
+    }});
+    res.status(201).json({
+      message: "Замовлення прийнято!",
+      orderId,
+      payments: {
+        invoiceId: invoiceId,
+        pageUrl: pageUrl,
+      }
+    });
+    return;
+  }
 
   res.status(201).json({
     message: "Замовлення прийнято!",

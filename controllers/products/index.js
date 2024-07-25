@@ -9,6 +9,7 @@ const getProductsByName = require("./getProductsByName");
 const updateSizeProduct = require("./updateSizeProduct");
 const getAllProductsName = require("./getAllProductsName");
 const getWishListProduct = require("./getWishListProduct");
+const monobankWebhook = require("./monobankWebhook");
 
 module.exports = {
   getProducts,
@@ -21,5 +22,6 @@ module.exports = {
   getProductsByName,
   updateSizeProduct,
   getAllProductsName,
-  getWishListProduct
+  getWishListProduct,
+  monobankWebhook
 };

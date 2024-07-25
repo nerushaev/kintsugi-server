@@ -3,6 +3,7 @@ const createRecipient = require("./createRecipient");
 const RequestError = require("./requestError");
 const generateTokens = require("./generateTokens");
 const formatDate = require("./formatDate");
+const monoPay = require("./monoPay");
 
 module.exports = {
   getStreetRef,
@@ -10,4 +11,5 @@ module.exports = {
   RequestError,
   generateTokens,
   formatDate,
+  monoPay
 };

@@ -5,7 +5,6 @@ const { POSTER_URL_API, POSTER_ACCESS_TOKEN } = process.env;
 
 const getProducts = async (req, res) => {
   const { page = 1, limit = 20, category, search, price } = req.query;
-  // await Order.deleteMany({});
   // await Product.deleteMany({});
 
   // const { data } = await axios.get(

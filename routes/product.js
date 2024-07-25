@@ -36,4 +36,6 @@ router.put(
 
 router.patch("/banners", ctrlWrapper(productCtrl.changeBanners));
 
+router.post("/monobankWebhook", ctrlWrapper(productCtrl.monobankWebhook));
+
 module.exports = router;

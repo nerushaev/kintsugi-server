@@ -60,6 +60,12 @@ const orderSchema = new Schema({
   },
   delivery: {
     type: String,
+  },
+  paymentId: {
+    type: String
+  },
+  paymentStatus: {
+    type: String
   }
 });
 
