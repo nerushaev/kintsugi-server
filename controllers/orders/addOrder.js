@@ -117,8 +117,8 @@ const addOrder = async (req, res) => {
     status: "Прийнято",
   });
 
-  // await transport.sendMail(adminOrderMessage);
-  // await transport.sendMail(userOrderMessage);
+  await transport.sendMail(adminOrderMessage);
+  await transport.sendMail(userOrderMessage);
 
   if (payments === "card") {
     const result = await monoPay({amount: totalPrice * 100});

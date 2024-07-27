@@ -1,11 +1,11 @@
 const { default: axios } = require("axios");
 
-const { MONOBANK_TEST_TOKEN, MONOBANK_CREATE_INVOICE_URL } = process.env;
+const { MONOBANK_TOKEN, MONOBANK_CREATE_INVOICE_URL } = process.env;
 
 const monoPay = async ({ amount }) => {
   const config = {
     headers: {
-      "X-Token": MONOBANK_TEST_TOKEN,
+      "X-Token": MONOBANK_TOKEN,
     },
   };
 
@@ -14,12 +14,12 @@ const monoPay = async ({ amount }) => {
   const {data} = await axios.post(MONOBANK_CREATE_INVOICE_URL, {
     amount: amount,
     ccy: 980,
-    webHookUrl: "https://api.kintsugi.org.ua/api/products/monobankWebhook"
+    webHookUrl: "https://api.kintsugi.org.ua/api/products/monobankWebhook",
+    redirectUrl: "https://kintsugi.org.ua/"
   }, config);
-
-  console.log(data);
 
   return data;
 };
 
 module.exports = monoPay;
+
