@@ -42,28 +42,27 @@ const userSchema = new Schema(
       city: {
         type: String,
       },
-      cityRef: {
-        type: String,
-      },
       warehouse: {
         type: String,
       },
-      recipientWarehouseIndex: {
+      postbox: {
         type: String,
       },
-      warehouseRef: {
-        type: String,
+      address: {
+        address: {
+          type: String,
+        },
+        house: {
+          type: String,
+        },
+        appartment: {
+          type: String,
+        },
       },
-      warehouseAddress: {
-        type: String,
-      },
-    },
-    avatarURL: {
-      type: String,
     },
     wishes: {
-      type: Array
-    }
+      type: Array,
+    },
   },
   { versionKey: false, timestampts: true }
 );

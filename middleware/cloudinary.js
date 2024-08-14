@@ -8,8 +8,8 @@ const options = {
   use_filename: true,
   unique_filename: false,
   overwrite: true,
-  height: 1200,
-  width: 1200,
+  // height: 1200,
+  // width: 1200,
 };
 
 exports.uploads = async (file, folder) => {

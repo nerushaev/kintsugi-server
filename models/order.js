@@ -19,19 +19,23 @@ const orderSchema = new Schema({
   },
   city: {
     type: String,
-    // required: [true, "Set city name"],
-  },
-  cityRef: {
-    type: String,
-    // required: [true, "Set cityRef!"],
   },
   warehouse: {
     type: String,
-    // required: [true, "Set warehouse name"],
   },
-  recipientWarehouseIndex: {
-    type: String,
-    // required: [true, "Set RecipientWarehouseIndex!"],
+  postbox: {
+    type: String
+  },
+  address: {
+    address: {
+      type: String,
+    },
+    house: {
+      type: String,
+    },
+    appartment: {
+      type: String,
+    },
   },
   products: {
     type: Array,
@@ -39,11 +43,6 @@ const orderSchema = new Schema({
   },
   payments: {
     type: String,
-    required: [true, "Set options!"],
-  },
-  password: {
-    type: String,
-    required: [false],
   },
   date: {
     type: String,
@@ -61,12 +60,33 @@ const orderSchema = new Schema({
   delivery: {
     type: String,
   },
+  deliveryDetails: {
+    type: String
+  },
   paymentId: {
     type: String
   },
   paymentStatus: {
     type: String
-  }
+  },
+  orderComments: {
+    type: String
+  },
+  deliveryComments: {
+    type: String
+  },
+  warehouseDelivery: {
+    type: Boolean
+  },
+  postboxDelivery: {
+    type: Boolean
+  },
+  addressDelivery: {
+    type: Boolean
+  },
+  notCall: {
+    type: Boolean
+  },
 });
 
 const Order = model("order", orderSchema);
