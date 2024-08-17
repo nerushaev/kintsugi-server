@@ -52,8 +52,9 @@ const productSchema = new Schema({
   },
   amount: {
     type: Number,
-  }
-});
+  },
+}, { versionKey: false, timestampts: true }
+);
 
 productSchema.index({product_name: 'text'});
 

@@ -29,8 +29,13 @@ router.post(
 );
 
 router.put(
-  "/:product_id",
+  "/photos/:product_id",
   upload.array("photo_extra"),
+  ctrlWrapper(productCtrl.updatePhotoProductById)
+);
+
+router.patch(
+  "/update/:product_id",
   ctrlWrapper(productCtrl.updateProductById)
 );
 
