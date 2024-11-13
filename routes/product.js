@@ -7,6 +7,8 @@ const validateMiddleware = validation(productSchema);
 
 const productCtrl = require("../controllers/products");
 
+router.get("/favorite", ctrlWrapper(productCtrl.getFavoriteProduct));
+
 router.get("/", productCtrl.getProducts);
 
 router.get("/all", ctrlWrapper(productCtrl.getAllProducts));
@@ -42,5 +44,7 @@ router.patch(
 router.patch("/banners", ctrlWrapper(productCtrl.changeBanners));
 
 router.post("/monobankWebhook", ctrlWrapper(productCtrl.monobankWebhook));
+
+router.patch("/favoriteUpdate", authenticate, ctrlWrapper(productCtrl.toggleProductToFavorite))
 
 module.exports = router;

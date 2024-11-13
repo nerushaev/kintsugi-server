@@ -64,6 +64,7 @@ const addOrder = async (req, res) => {
       date: DateFormat,
       delivery: deliveryMessage,
       deliveryDetails: deliveryMessage,
+      totalPrice: totalPrice,
       ...req.body
     })
 

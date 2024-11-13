@@ -100,9 +100,11 @@ const webHookPoster = async (req, res) => {
           amount: totalAmount,
         };
 
-        await Product.create({
-          ...productItem,
-        });
+        await Product.create(
+          {
+            ...productItem,
+          }
+        );
         res.status(200);
       } else {
         console.log("no mod");
@@ -124,18 +126,20 @@ const webHookPoster = async (req, res) => {
           newPrice = spotsPrice;
         }
 
-        await Product.create({
-          product_name,
-          category_name,
-          product_id,
-          menu_category_id,
-          photo,
-          photo_origin,
-          price: newPrice,
-          barcode,
-          hidden,
-          modifications,
-        });
+        await Product.create(
+          {
+            product_name,
+            category_name,
+            product_id,
+            menu_category_id,
+            photo,
+            photo_origin,
+            price: newPrice,
+            barcode,
+            hidden,
+            modifications,
+          }
+        );
 
         res.status(200);
       }
@@ -208,7 +212,8 @@ const webHookPoster = async (req, res) => {
           { product_id: product_id },
           {
             ...productItem,
-          }
+          },
+          { timestamps: true }
         );
         res.status(200);
       } else {
@@ -252,7 +257,7 @@ const webHookPoster = async (req, res) => {
           { product_id: product_id },
           {
             ...productItem,
-          }
+          }, { timestamps: true }
         );
         res.status(200);
       }
@@ -333,7 +338,7 @@ const webHookPoster = async (req, res) => {
             { product_id: product_id },
             {
               ...productItem,
-            }
+            }, { timestamps: true }
           );
           res.status(200);
         } else {
@@ -377,7 +382,7 @@ const webHookPoster = async (req, res) => {
             { product_id: product_id },
             {
               ...productItem,
-            }
+            }, { timestamps: true }
           );
           res.status(200);
         }
@@ -388,29 +393,9 @@ const webHookPoster = async (req, res) => {
             $set: {
               amount: value_absolute,
             },
-          }
+          }, { timestamps: true }
         );
       }
-
-      //   if (product_id) {
-      //     await Product.findOneAndUpdate(
-      //       { product_id: product_id },
-      //       {
-      //         $set: {
-      //           amount: value_absolute,
-      //         },
-      //       }
-      //     );
-      //   } else {
-      //     await Product.findOneAndUpdate(
-      //       { product_id: element_id },
-      //       {
-      //         $set: {
-      //           amount: value_absolute,
-      //         },
-      //       }
-      //     );
-      //   }
       res.status(200);
     }
   }

@@ -53,7 +53,10 @@ const productSchema = new Schema({
   amount: {
     type: Number,
   },
-}, { versionKey: false, timestampts: true }
+  favorite: {
+    type: Boolean
+  }
+}, { versionKey: false, timestamps: true }
 );
 
 productSchema.index({product_name: 'text'});

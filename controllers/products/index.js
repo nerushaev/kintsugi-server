@@ -11,6 +11,8 @@ const getAllProductsName = require("./getAllProductsName");
 const getWishListProduct = require("./getWishListProduct");
 const monobankWebhook = require("./monobankWebhook");
 const updateProductById = require("./updateProductById");
+const getFavoriteProduct = require("./getFavoriteProduct");
+const toggleProductToFavorite = require("./toggleProductToFavorite");
 
 module.exports = {
   getProducts,
@@ -25,5 +27,7 @@ module.exports = {
   getAllProductsName,
   getWishListProduct,
   monobankWebhook,
-  updateProductById
+  updateProductById,
+  getFavoriteProduct,
+  toggleProductToFavorite
 };

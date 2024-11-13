@@ -5,6 +5,7 @@ const { POSTER_URL_API, POSTER_ACCESS_TOKEN } = process.env;
 
 const getProducts = async (req, res) => {
   const { page = 1, limit = 20, category, search, price } = req.query;
+  console.log(req)
   // await Product.deleteMany({});
 
   // const { data } = await axios.get(
@@ -152,6 +153,7 @@ const getProducts = async (req, res) => {
     });
   } else {
     const products = await Product.find(query)
+    .sort({createdAt: -1})
     .limit(limit * 1)
     .skip((page - 1) * limit)
     .exec();
