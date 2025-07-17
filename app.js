@@ -6,7 +6,13 @@ const cookieParser = require("cookie-parser");
 const cors = require("cors");
 
 const origin = "https://kintsugi.org.ua";
+<<<<<<< Updated upstream
 // const origin = "http://localhost:5173";
+=======
+// const origin = "http://localhost:3000";
+// const origin = "http://www.kintsugi.org.ua";
+// const origin = "https://hanging-mustang-massage-democracy.trycloudflare.com"
+>>>>>>> Stashed changes
 
 // const origin =
 //   process.env.NODE_ENV === "development"
