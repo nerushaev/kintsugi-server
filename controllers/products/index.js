@@ -6,13 +6,12 @@ const updatePhotoProductById = require("./updatePhotoProductById");
 const getAllProducts = require("./getAllProducts");
 const getComingSoonProducts = require("./getComingSoonProducts");
 const getProductsByName = require("./getProductsByName");
-const updateSizeProduct = require("./updateSizeProduct");
 const getAllProductsName = require("./getAllProductsName");
 const getWishListProduct = require("./getWishListProduct");
 const monobankWebhook = require("./monobankWebhook");
-const updateProductById = require("./updateProductById");
+const updateDescription = require("./updateDescription");
 const getFavoriteProduct = require("./getFavoriteProduct");
-const toggleProductToFavorite = require("./toggleProductToFavorite");
+const checkAvailability = require("./checkAvailability");
 
 module.exports = {
   getProducts,
@@ -23,11 +22,10 @@ module.exports = {
   getAllProducts,
   getComingSoonProducts,
   getProductsByName,
-  updateSizeProduct,
   getAllProductsName,
   getWishListProduct,
   monobankWebhook,
-  updateProductById,
+  updateDescription,
   getFavoriteProduct,
-  toggleProductToFavorite
+  checkAvailability
 };

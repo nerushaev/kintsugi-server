@@ -1,18 +1,14 @@
 const Product = require("../../models/product");
 
 const getWishListProduct = async (req, res) => {
-  const {wishes} = req.params;
-  console.log(wishes);
-
-  const productsId = wishes.split(',');
-  
-  const result = await Product.find().where('product_id').in(productsId).exec();
-
-  console.log(result);
+  console.log("🚀 Контроллер вызван");
+  const { user } = req;
+  const { wishes } = user;
+  const result = await Product.find().where("product_id").in(wishes).exec();
 
   res.status(200).json({
-    products: result
+    products: result,
   });
-}
+};
 
 module.exports = getWishListProduct;

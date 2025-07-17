@@ -5,7 +5,6 @@ const { User } = require("../../models/user");
 const { REFRESH_SECRET_KEY } = process.env;
 
 const refresh = async (req, res) => {
-  console.log(req.cockies);
   const { refreshToken } = req.cookies;
 
   if (!refreshToken) {
@@ -16,33 +15,37 @@ const refresh = async (req, res) => {
   const data = await User.findOne({ _id: id, refreshToken });
 
   if (!data) {
-    throw RequestError(401, "Not authorized refresh");
+    return next(createHttpError(401));
   }
 
   const tokens = await generateTokens(data._id);
 
-  await User.findByIdAndUpdate(data._id, {
+  const user = await User.findByIdAndUpdate(data._id, {
     token: tokens.token,
     refreshToken: tokens.refreshToken,
   });
 
-  res
-  .cookie("refreshToken", refreshToken, {
-    sameSite: "None",
-    httpOnly: true,
-    secure: true,
-    domain: "kintsugi.org.ua",
-    maxAge: 30 * 24 * 60 * 60 * 1000,
-  })
+res.cookie("refreshToken", tokens.refreshToken, {
+  sameSite: "Lax",
+  httpOnly: true,
+  secure: true,
+  domain: undefined,
+  maxAge: 30 * 24 * 60 * 60 * 1000,
+});
+
+res.cookie("token", tokens.token, {
+  sameSite: "Lax",
+  httpOnly: true,
+  secure: true,
+  domain: undefined,
+  maxAge: 15 * 60 * 1000, // например, 15 минут для access token
+});
+
+  
 
   res.json({
     token: tokens.token,
-    user: {
-      name: data.name,
-      email: data.email,
-      phone: data.phone,
-      role: data.role,
-    },
+    user: user,
   });
 };
 

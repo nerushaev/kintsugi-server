@@ -1,6 +1,7 @@
 const Product = require('../../models/product');
 
 const getProductById = async (req, res) => {
+  console.log('here')
   const productsId = req.params;
   const result = productsId._id.split(",");
 
