@@ -4,6 +4,8 @@ const RequestError = require("./requestError");
 const generateTokens = require("./generateTokens");
 const formatDate = require("./formatDate");
 const monoPay = require("./monoPay");
+const addTagsToDocument = require("./addTagsToDocument");
+const stringToArray = require("./stringToArray");
 
 module.exports = {
   getStreetRef,
@@ -11,5 +13,7 @@ module.exports = {
   RequestError,
   generateTokens,
   formatDate,
-  monoPay
+  monoPay,
+  addTagsToDocument,
+  stringToArray
 };

@@ -1,13 +1,135 @@
-const { default: axios } = require("axios");
-const Order = require("../../models/order");
 const Product = require("../../models/product");
-const { POSTER_URL_API, POSTER_ACCESS_TOKEN } = process.env;
+const ProductMeta = require("../../models/productsMeta");
 
 const getProducts = async (req, res) => {
-  const { page = 1, limit = 20, category, search, price } = req.query;
-  console.log(req)
-  // await Product.deleteMany({});
+  try {
+    const {
+      page = 1,
+      limit = 20,
+      search,
+      price,
+      sortByMetaIssues = false,
+    } = req.query;
 
+    const { category } = req.params;
+
+    const query = {
+      amount: { $gt: 0 },
+      price: { $gt: 3000 },
+    };
+
+    if (category) {
+      query.category_name = category;
+    }
+
+    let sort = {};
+    if (price === 'low') {
+      sort.price = 1;
+    } else if (price === 'high') {
+      sort.price = -1;
+    }
+
+    let metaProblemIds = [];
+
+    if (sortByMetaIssues === 'true') {
+      // Найти товары с проблемной мета
+      const metas = await ProductMeta.find({}, 'product_id tags type color fandom character').lean();
+      const badMetaIds = new Set();
+
+      for (const meta of metas) {
+        const { product_id, tags, type, color, fandom, character } = meta;
+        if (
+          !tags?.length ||
+          !type?.length ||
+          !color?.length ||
+          !fandom?.length ||
+          !character?.length
+        ) {
+          badMetaIds.add(product_id);
+        }
+      }
+
+      const allProductIdsWithMeta = new Set(metas.map(meta => meta.product_id));
+      const productsWithoutMeta = await Product.find({ product_id: { $nin: Array.from(allProductIdsWithMeta) } }, 'product_id').lean();
+      productsWithoutMeta.forEach(p => badMetaIds.add(p.product_id));
+
+      metaProblemIds = Array.from(badMetaIds);
+    }
+
+    // 📌 Если есть поиск через Atlas Search
+    if (search) {
+      const pipeline = [
+        {
+          $search: {
+            index: "search",
+            text: {
+              query: search,
+              path: "product_name",
+              fuzzy: {
+                maxEdits: 2,
+                prefixLength: 1,
+              },
+            },
+          },
+        },
+        { $match: { comingSoon: { $exists: false }, ...query } },
+      ];
+
+      let foundProducts = await Product.aggregate(pipeline);
+
+      if (sortByMetaIssues === 'true' && metaProblemIds.length > 0) {
+        foundProducts = sortProductsWithMetaIssues(foundProducts, metaProblemIds);
+      }
+
+      const paginatedProducts = foundProducts.slice((page - 1) * limit, page * limit);
+
+      return res.json({
+        products: paginatedProducts,
+        totalPages: Math.ceil(foundProducts.length / limit),
+        currentPage: Number(page),
+      });
+    }
+
+    // 📌 Без поиска
+    let products = await Product.find(query)
+      .sort(Object.keys(sort).length ? sort : { createdAt: -1, _id: -1 })
+      .lean()
+      .exec();
+
+    if (sortByMetaIssues === 'true' && metaProblemIds.length > 0) {
+      products = sortProductsWithMetaIssues(products, metaProblemIds);
+    }
+
+    const paginatedProducts = products.slice((page - 1) * limit, page * limit);
+
+    return res.json({
+      products: paginatedProducts,
+      totalPages: Math.ceil(products.length / limit),
+      currentPage: Number(page),
+    });
+
+  } catch (error) {
+    console.error("Ошибка получения товаров:", error);
+    res.status(500).json({ message: "Ошибка сервера при получении товаров" });
+  }
+};
+
+// 🔥 Функция сортировки проблемных товаров вверх
+function sortProductsWithMetaIssues(products, badMetaIds) {
+  return products.sort((a, b) => {
+    const aBad = badMetaIds.includes(a.product_id);
+    const bBad = badMetaIds.includes(b.product_id);
+
+    if (aBad && !bBad) return -1;
+    if (!aBad && bBad) return 1;
+    return 0;
+  });
+}
+
+module.exports = getProducts;
+
+
+  // await Product.deleteMany({});
   // const { data } = await axios.get(
   //   `${POSTER_URL_API}/menu.getProducts?token=${POSTER_ACCESS_TOKEN}`
   // );
@@ -113,58 +235,3 @@ const getProducts = async (req, res) => {
   //     });
   //   }
   // });
-
-  const query = {
-    amount: { $gt: 0 },
-    price: { $gt: 3000 },
-  };
-
-  if(category) {
-    query.category_name = category
-  }
-
-  if (search) {
-      query.$text = {
-      $search: search
-    }
-  }
-
-  let sort = {};
-  if (price === 'low') {
-    sort.price = 1;
-  } else if (price === 'high') {
-    sort.price = -1;
-  }
-
-  const count = await Product.countDocuments(query);
-
-  if(sort.price) {
-    const products = await Product.find(query)
-    .sort({'price': sort.price})
-    .limit(limit * 1)
-    .skip((page - 1) * limit)
-    .exec();
-
-    res.json({
-      products,
-      totalPages: Math.ceil(count / limit),
-      currentPage: Number(page),
-      message: "okay"
-    });
-  } else {
-    const products = await Product.find(query)
-    .sort({createdAt: -1})
-    .limit(limit * 1)
-    .skip((page - 1) * limit)
-    .exec();
-
-  res.json({
-    products,
-    totalPages: Math.ceil(count / limit),
-    currentPage: Number(page),
-    message: "okay",
-  });
-  }
-};
-
-module.exports = getProducts;

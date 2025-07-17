@@ -6,13 +6,9 @@ const cookieParser = require("cookie-parser");
 const cors = require("cors");
 
 const origin = "https://kintsugi.org.ua";
-<<<<<<< Updated upstream
-// const origin = "http://localhost:5173";
-=======
+
 // const origin = "http://localhost:3000";
-// const origin = "http://www.kintsugi.org.ua";
-// const origin = "https://hanging-mustang-massage-democracy.trycloudflare.com"
->>>>>>> Stashed changes
+
 
 // const origin =
 //   process.env.NODE_ENV === "development"
@@ -25,6 +21,9 @@ const authRouter = require("./routes/auth");
 const orderRouter = require("./routes/order");
 const feedbackRouter = require("./routes/feedback");
 const posterRouter = require("./routes/poster");
+const metaRouter = require("./routes/meta");
+const bundleRouter = require("./routes/bundle");
+const tagsRouter = require("./routes/tags");
 
 const app = express();
 
@@ -50,6 +49,9 @@ app.use("/api/products/", productsRouter);
 app.use("/api/orders/", orderRouter);
 app.use("/api/feedback/", feedbackRouter);
 app.use("/api/poster/", posterRouter);
+app.use("/api/meta/", metaRouter);
+app.use("/api/bundle/", bundleRouter);
+app.use("/api/tags/", tagsRouter);
 
 app.use((req, res) => {
   res.status(404).json({ message: "Not found" });

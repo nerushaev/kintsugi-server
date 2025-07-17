@@ -1,158 +1,215 @@
 const Order = require("../../models/order");
 const { User } = require("../../models/user");
-// const moment = require("moment");
 const RandExp = require("randexp");
-const { KINTSUGI_GMAIL, PRIVATE_LIQPAY_KEY } = process.env;
+const { KINTSUGI_GMAIL } = process.env;
 const { transport } = require("../../middleware");
-// const crypto = require("crypto");
 const { monoPay } = require("../../helpers");
 
 const addOrder = async (req, res) => {
-  const {
-    name,
-    email,
-    phone,
-    address,
-    addressDelivery,
-    products,
-    city,
-    delivery,
-    notCall,
-    orderComments,
-    deliveryComments,
-    payments,
-    warehouse,
-    postbox,
-    postboxDelivery,
-    warehouseDelivery,
-  } = req.body;
+  console.log("+++ addOrder handler called");
 
-  const orderId = new RandExp(/^[A-Z]{2}\d{10}$/).gen();
-  const deliveryMessage = delivery === "nova" ? "Нова Пошта" : "Самовивіз";
-  const deliveryDetails = 
-    (warehouseDelivery && "До відділення") ||
-    (postboxDelivery && "До поштомату") ||
-    (addressDelivery && "Курьерською доставкою");
+  try {
+    console.log("1. Распаковали req.body:", req.body);
 
-  //Незарегестрированый юзер
+    const {
+      email,
+      products,
+      bundles,
+      notCall,
+      firstName,
+      lastName,
+      phone,
+      payments,
+      address,
+      deliveryType, // деструктурили deliveryType
+      deliveryMethod, // добавил для ясности
+    } = req.body;
 
-  const user = await User.findOne({ email });
-  if (user) {
-    await User.findByIdAndUpdate(user._id, {
-      $push: {
-        orders: orderId,
-      },
+    console.log("2. До User.findOne");
+    const user = await User.findOne({ email });
+    console.log("3. После User.findOne, user:", user);
+
+    const orderId = new RandExp(/^[A-Z]{2}\d{10}$/).gen();
+    console.log("4. Сгенерирован orderId:", orderId);
+
+    if (user) {
+      console.log("5. Апдейтим пользователя:", user._id);
+      await User.findByIdAndUpdate(user._id, { $push: { orders: orderId } });
+      console.log("6. Пользователь обновлён");
+    } else {
+      console.log("5. Пользователь не найден, пропускаем апдейт");
+    }
+
+    console.log("7. Начинаем подсчёт totalPrice");
+    let totalPrice = 0;
+    products.forEach((item) => {
+      totalPrice += (item.price / 100) * item.amount;
     });
-  }
+    bundles.forEach((item) => {
+      totalPrice += (item.newPrice / 100) * item.amount;
+    });
 
-  let totalPrice = 0;
-  products.map((item) => {
-    return (totalPrice += (item.price / 100) * item.amount);
-  });
+    // 6. Формат даты
+    const D = new Date();
+    const DateFormat =
+      ("0" + D.getDate()).slice(-2) +
+      "." +
+      ("0" + (D.getMonth() + 1)).slice(-2) +
+      "." +
+      D.getFullYear();
+    console.log("9. Сформатирована дата:", DateFormat);
 
-  let D = new Date();
-  const DateFormat =
-    ("0" + D.getDate()).slice(-2) +
-    "." +
-    ("0" + (D.getMonth() + 1)).slice(-2) +
-    "." +
-    D.getFullYear();
-
-
-  await Order.create({
-      orderId: orderId,
-      date: DateFormat,
-      delivery: deliveryMessage,
-      deliveryDetails: deliveryMessage,
-      totalPrice: totalPrice,
-      ...req.body
-    })
-
-
-  const userOrderMessage = {
-    from: KINTSUGI_GMAIL,
-    to: email,
-    subject: "Ви зробили замовлення в косплей магазині Kintsugi!",
-    html: `<h2>Ваше замовлення ${orderId}</h2>
-            <h3>Деталі замовлення:</h3>
-            ${products.map((item) => {
-              return `<img src=${`https://kintsugi.joinposter.com${item.photo_origin}`} referrerpolicy="no-referrer"  />
-                      <p>${item.product_name}</p>
-                      <p>Ціна: ${item.price / 100}грн</p>
-
-              `;
-            })}
-            <h3>Загальна сума: ${totalPrice}грн</h3>
-            <h3>Доставка: ${deliveryMessage}</h3>
-            ${delivery === "nova" ? `
-            <p>Замовлення ${deliveryDetails}</p>
-            <p>Місто: ${city}</p>
-            ${warehouseDelivery ? `<p>${warehouse}</p>` : ""}
-            ${postboxDelivery ? `<p>${postbox}</p>` : ""}
-            ${addressDelivery ? `<p>Адреса: ${address.address} буд.${address.house} кв.${address.appartment}</p>` : ""}
-            ` : ''}
-            
-    `,
-  };
-
-  const adminOrderMessage = {
-    from: KINTSUGI_GMAIL,
-    to: "kolyanerushaev@gmail.com",
-    subject: "Нове замовлення!",
-    html: `<h2>Номер замовлення ${orderId}</h2>
-            <h3>Інформація про покупця</h3>
-            <p>Ім'я: ${name}</p>
-            <p>Пошта: ${email}</p>
-            <p>Телефон: ${phone}</p>
-            <h3>Доставка: ${deliveryMessage}</h3>
-            <h3>Оплата: ${payments === "card" ? "Онлайн оплата" : "Накладений платіж"}</h3>
-            ${notCall ? "Не телефонувати" : ""}
-            ${delivery === "nova" ? `
-            <p>Замовлення ${deliveryDetails}</p>
-            <p>Місто: ${city}</p>
-            ${warehouseDelivery ? `<p>${warehouse}</p>` : ""}
-            ${postboxDelivery ? `<p>${postbox}</p>` : ""}
-            ${addressDelivery ? `<p>Адреса: ${address.address} буд.${address.house} кв.${address.appartment}</p>` : ""}
-            ` : ''}
-            <h3>Деталі замовлення:</h3>
-            ${products.map((item) => {
-              return `<img src=${`https://kintsugi.joinposter.com${item.photo_origin}`} referrerpolicy="no-referrer"  />
-                      <p>${item.product_name}</p>
-                      ${item.size ? `<p>${item.size}</p>` : ""}
-                      <p>Ціна: ${item.price / 100}грн</p>
-                      <p>Кількість: ${item.amount}</p>
-              `;
-            })}
-            <h3>Загальна сума: ${totalPrice}грн</h3>
-    `,
-  };
-
-  await transport.sendMail(adminOrderMessage);
-  await transport.sendMail(userOrderMessage);
-
-  if (payments === "card") {
-    const result = await monoPay({amount: totalPrice * 100});
-    console.log(result);
-    const { invoiceId, pageUrl } = result;
-    await Order.findOneAndUpdate({orderId}, {$set: {
-      paymentId: invoiceId,
-      paymentStatus: "unpaid"
-    }});
-    res.status(201).json({
-      message: "Замовлення прийнято!",
+    // 7. Создание заказа в базе
+    console.log("10. До Order.create");
+    await Order.create({
       orderId,
-      payments: {
-        invoiceId: invoiceId,
-        pageUrl: pageUrl,
-      }
+      date: DateFormat,
+      totalPrice,
+      ...req.body,
     });
-    return;
-  }
 
-  res.status(201).json({
-    message: "Замовлення створено!",
-    orderId,
-  });
+    const deliveryHtml = (() => {
+      if (deliveryMethod === "nova") {
+        if (address.deliveryType === "branch" && address.warehouse) {
+          return `
+          <p>Місто: ${address.city}</p>
+          <p>Доставка на відділення Нової пошти: ${address.warehouse}</p>
+                  `;
+        }
+        if (address.deliveryType === "postbox" && address.postbox) {
+          return `
+          <p>Місто: ${address.city}</p>
+          <p>Доставка на поштову скриньку: ${address.postbox}</p>
+                  `;
+        }
+        if (address.deliveryType === "address" && address.address) {
+          return `
+          <p>Місто: ${address.city}</p>
+          <p>Доставка за адресою: ${address.address}, буд. ${address.house}, кв. ${address.apartment}</p>
+                  `;
+        }
+      }
+      return `<p>Тип доставки: Самовивіз</p>`;
+    })();
+
+    const productsHtml = products
+      .map(
+        (item) => `
+      <div style="margin-bottom:15px;">
+        <img src="https://kintsugi.joinposter.com${
+          item.photo_origin || ""
+        }" alt="${item.product_name}" style="max-width:100px;"/><br/>
+        <strong>${item.product_name}</strong><br/>
+        ${item.size ? `<em>Розмір: ${item.size}</em><br/>` : ""}
+        Ціна: ${(item.price / 100).toFixed(2)} грн<br/>
+        Кількість: ${item.amount}
+      </div>`
+      )
+      .join("");
+
+    const bundlesHtmls = bundles?.map(
+      (item) =>
+        `
+      <div style="margin-bottom:15px;">
+        
+        <h3>${item.title}</h3><br/>
+        ${item.products
+          .map(
+            (item) => `
+      <div style="margin-bottom:15px;">
+        <img src="https://kintsugi.joinposter.com${
+          item.photo_origin || ""
+        }" alt="${item.product_name}" style="max-width:100px;"/><br/>
+        <strong>${item.product_name}</strong><br/>
+        ${item.size ? `<em>Розмір: ${item.size}</em><br/>` : ""}
+        Ціна: ${(item.price / 100).toFixed(2)} грн<br/>
+      </div>`
+          )
+          .join("")}
+        Ціна: ${(item.newPrice / 100).toFixed(2)} грн<br/>
+      </div>`
+    );
+
+    const userOrderMessage = {
+      from: KINTSUGI_GMAIL,
+      to: "kolyanerushaev@gmail.com",
+      subject: `Ваше замовлення ${orderId} підтверджено!`,
+      html: `
+        <h2>Дякуємо за замовлення!</h2>
+        <h3>Деталі замовлення:</h3>
+        ${productsHtml}
+        ${bundlesHtmls}
+        <h3>Загальна сума: ${totalPrice.toFixed(2)}грн</h3>
+        <h3>Доставка:</h3>
+        ${deliveryHtml}
+        <p>${notCall ? "Ви попросили не телефонувати." : ""}</p>
+        <p>Оплата: ${
+          payments === "card" ? "Онлайн оплата" : "Накладений платіж"
+        }</p>
+      `,
+    };
+
+    const adminOrderMessage = {
+      from: KINTSUGI_GMAIL,
+      to: "kolyanerushaev@gmail.com",
+      subject: `Нове замовлення ${orderId}`,
+      html: `
+        <h2>Нове замовлення ${orderId}</h2>
+        <h3>Інформація про покупця</h3>
+        <p>Ім'я: ${firstName} ${lastName}</p>
+        <p>Пошта: ${email}</p>
+        <p>Телефон: ${phone}</p>
+        <h3>Доставка:</h3>
+        ${deliveryHtml}
+        <h3>Оплата:</h3>
+        <p>${payments === "card" ? "Онлайн оплата" : "Накладений платіж"}</p>
+        <p>${notCall ? "Не телефонувати покупцю" : ""}</p>
+        <h3>Деталі замовлення:</h3>
+        ${productsHtml}
+        ${bundlesHtmls}
+        <h3>Загальна сума: ${totalPrice.toFixed(2)} грн</h3>
+      `,
+    };
+
+    await transport.sendMail(userOrderMessage);
+
+    await transport.sendMail(adminOrderMessage);
+
+    if (payments === "card") {
+      console.log("22. Начинаем monoPay");
+      const result = await monoPay({ amount: totalPrice * 100 });
+      console.log("23. monoPay вернул:", result);
+
+      await Order.findOneAndUpdate(
+        { orderId },
+        {
+          $set: {
+            paymentId: result.invoiceId,
+            paymentStatus: "unpaid",
+          },
+        }
+      );
+
+      res.status(201).json({
+        message: "Замовлення прийнято!",
+        orderId,
+        payments: {
+          invoiceId: result.invoiceId,
+          pageUrl: result.pageUrl,
+        },
+        status: "new",
+      });
+      return;
+    }
+
+    res.status(201).json({
+      message: "Замовлення створено!",
+      orderId,
+      status: "Нове замовлення",
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 };
 
 module.exports = addOrder;

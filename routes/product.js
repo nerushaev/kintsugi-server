@@ -9,7 +9,13 @@ const productCtrl = require("../controllers/products");
 
 router.get("/favorite", ctrlWrapper(productCtrl.getFavoriteProduct));
 
+router.get("/search", ctrlWrapper(productCtrl.getProductsByName));
+
+router.get("/wish", authenticate, ctrlWrapper(productCtrl.getWishListProduct));
+
 router.get("/", productCtrl.getProducts);
+
+router.get("/:category", productCtrl.getProducts);
 
 router.get("/all", ctrlWrapper(productCtrl.getAllProducts));
 
@@ -17,11 +23,18 @@ router.get("/getNames", ctrlWrapper(productCtrl.getAllProductsName));
 
 router.get("/comingSoon", ctrlWrapper(productCtrl.getComingSoonProducts));
 
-router.get("/:_id", ctrlWrapper(productCtrl.getProductById));
+router.post("/availability", ctrlWrapper(productCtrl.checkAvailability));
 
-router.get("/wish/:wishes", authenticate, ctrlWrapper(productCtrl.getWishListProduct));
+router.get("/id/:_id", ctrlWrapper(productCtrl.getProductById));
+
 
 router.delete("/:productId", ctrlWrapper(productCtrl.removeProductById));
+
+router.patch(
+  "/update/:product_id",
+  ctrlWrapper(productCtrl.updateDescription)
+);
+
 
 router.post(
   "/",
@@ -36,10 +49,7 @@ router.put(
   ctrlWrapper(productCtrl.updatePhotoProductById)
 );
 
-router.patch(
-  "/update/:product_id",
-  ctrlWrapper(productCtrl.updateProductById)
-);
+
 
 router.patch("/banners", ctrlWrapper(productCtrl.changeBanners));
 
