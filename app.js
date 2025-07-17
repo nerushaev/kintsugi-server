@@ -5,10 +5,13 @@ require("dotenv").config();
 const cookieParser = require("cookie-parser");
 const cors = require("cors");
 
-const origin = "https://kintsugi.org.ua";
-
+const allowedOrigins = [
+  "https://kintsugi.org.ua",
+  "https://www.kintsugi.org.ua",
+];
 // const origin = "http://localhost:3000";
-
+// const origin = "http://www.kintsugi.org.ua";
+// const origin = "https://hanging-mustang-massage-democracy.trycloudflare.com"
 
 // const origin =
 //   process.env.NODE_ENV === "development"
@@ -29,12 +32,15 @@ const app = express();
 
 const formatsLogger = app.get("env") === "development" ? "dev" : "short";
 
-app.use(
-  cors({
-    credentials: true,
-    origin,
-  })
-);
+app.use(cors({
+  credentials: true,
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error("Not allowed by CORS"));
+  },
+}));
 
 app.set("trust proxy", 1);
 
