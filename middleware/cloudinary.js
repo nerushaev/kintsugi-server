@@ -8,8 +8,6 @@ const options = {
   use_filename: true,
   unique_filename: false,
   overwrite: true,
-  // height: 1200,
-  // width: 1200,
 };
 
 exports.uploads = async (file, folder) => {
@@ -19,15 +17,4 @@ exports.uploads = async (file, folder) => {
   } catch (error) {
     console.log(error);
   }
-  // return new Promise(resolve => {
-  //   cloudinary.uploader.upload(file, (result) => {
-  //     resolve({
-  //       url: result.url,
-  //       id: result._id
-  //     })
-  //   })
-  // }, {
-  //   resource_type: "auto",
-  //   folder: folder,
-  // })
 };

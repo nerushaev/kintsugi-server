@@ -1,44 +1,58 @@
+const { failure, success } = require("../../helpers/response");
 const { User } = require("../../models/user");
 
 const updateUser = async (req, res) => {
-  const { _id } = req.user;
-  const { name, email, phone } = req.body;
+  try {
+    const { _id } = req.user;
+    const { firstName, lastName, email, phone } = req.body;
 
-  const duplicateEmail = await User.findOne({ email });
-  const duplicatePhone = await User.findOne({ phone });
+    const duplicateEmail = await User.findOne({ email, _id: { $ne: _id } });
+    const duplicatePhone = await User.findOne({ phone, _id: { $ne: _id } });
+    
 
-  console.log(JSON.stringify(_id) === JSON.stringify(duplicateEmail._id));
-
-  if (JSON.stringify(duplicateEmail._id) !== JSON.stringify(_id)) {
-    res.status(409).json({
-      status: 409,
-      message: "Користувач із такою поштою вже існує!",
-    });
-  }
-
-  if (JSON.stringify(duplicatePhone._id) !== JSON.stringify(_id)) {
-    res.status(409).json({
-      status: 409,
-      message: "Користувач із таким номером вже існує!",
-    });
-  }
-
-  const data = await User.findOneAndUpdate(
-    _id,
-    {
-      name,
-      email,
-      phone,
-    },
-    {
-      new: true,
+    if (duplicateEmail) {
+      return failure(
+        res,
+        "Користувач із такою поштою вже існує!",
+        409,
+        "DUPLICATE_EMAIL"
+      );
     }
-  );
 
-  res.status(201).json({
-    message: "Данні успішно оновлено!",
-    user: data,
-  });
+    if (duplicatePhone) {
+      return failure(
+        res,
+        "Користувач із таким номером вже існує!",
+        409,
+        "DUPLICATE_PHONE"
+      );
+    }
+
+    const updatedUser = await User.findOneAndUpdate(
+      _id,
+      {
+        firstName,
+        lastName,
+        email,
+        phone,
+      },
+      {
+        new: true,
+      }
+    );
+
+    if (!updatedUser) {
+      return failure(res, "Користувача не знайдено", 404, "USER_NOT_FOUND");
+    }
+    return success(res, updatedUser, "Дані успішно оновлено!");
+  } catch (error) {
+    return failure(
+      res,
+      "Помилка оновлення даних користувача",
+      500,
+      error.message || error
+    );
+  }
 };
 
 module.exports = updateUser;

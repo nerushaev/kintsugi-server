@@ -43,7 +43,6 @@ const monobankWebhook = async (req, res) => {
         html: `<h2>Ваше замовлення ${result.orderId} успішно сплачене!</h2>
     `,
       };
-      console.log("here");
       await transport.sendMail(userOrderMessage);
     }
   }

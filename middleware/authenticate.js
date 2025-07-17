@@ -4,29 +4,30 @@ const jwt = require("jsonwebtoken");
 const { ACCESS_SECRET_KEY } = process.env;
 
 const authenticate = async (req, res, next) => {
-  const { authorization } = req.headers;
-  console.log("authorization", authorization);
-  if (!authorization) {
-    next(createHttpError(401));
-    return;
+  const token = req.cookies.token;
+  console.log("Token from cookie:", token);
+  if (!token) {
+    return next(createHttpError(401, "No token provided"));
   }
-  const [bearer, token] = authorization ? authorization.split(" ") : null;
-  console.log(bearer);
-  if (bearer !== "Bearer") {
-    next(createHttpError(401));
-  }
-
   try {
-    const { id } = jwt.verify(token, ACCESS_SECRET_KEY);
-    const user = await User.findById(id);
-    if (!user || !token) {
-      next(createHttpError(401));
+    const decoded = jwt.verify(token, ACCESS_SECRET_KEY);
+    const decodedAccess = jwt.decode(token, { complete: true });
+    console.log("Decoded JWT header:", decodedAccess?.header);
+    console.log("Decoded JWT payload:", decodedAccess?.payload);
+
+    const user = await User.findById(decoded.id);
+
+    if (!user) {
+      return next(createHttpError(401, "User not found"));
     }
     req.user = user;
     next();
-  } catch {
-    next(createHttpError(401));
+  } catch (error) {
+    console.error("Auth error:", error);
+    next(createHttpError(401, "Token verification failed"));
   }
 };
+
+module.exports = authenticate;
 
 module.exports = authenticate;

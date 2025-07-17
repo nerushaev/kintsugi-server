@@ -1,9 +1,37 @@
 const { Schema, model } = require("mongoose");
 const Joi = require("joi");
 
+const addressSchema = new Schema({
+  deliveryType: {
+    type: String,
+  },
+  city: {
+    type: String,
+  },
+  warehouse: {
+    type: String,
+  },
+  postbox: {
+    type: String,
+  },
+  address: {
+    type: String,
+  },
+  house: {
+    type: String,
+  },
+  apartment: {
+    type: String,
+  },
+});
+
 const userSchema = new Schema(
   {
-    name: {
+    firstName: {
+      type: String,
+      required: [true, "Set name!"],
+    },
+    lastName: {
       type: String,
       required: [true, "Set name!"],
     },
@@ -14,7 +42,7 @@ const userSchema = new Schema(
     },
     phone: {
       type: String,
-      unique: [true, "Phone is not unique!"],
+      unique: true,
       required: [true, "Set phone!"],
     },
     password: {
@@ -22,43 +50,22 @@ const userSchema = new Schema(
       required: true,
       minLength: 6,
     },
-    verify: {
-      type: Boolean,
-      default: false,
-    },
     verificationToken: {
       type: String,
     },
     role: {
       type: String,
+      default: "user",
     },
     orders: [
       {
         type: Schema.Types.Mixed,
-        ref: "orders",
+        ref: "order",
       },
     ],
-    delivery: {
-      city: {
-        type: String,
-      },
-      warehouse: {
-        type: String,
-      },
-      postbox: {
-        type: String,
-      },
-      address: {
-        address: {
-          type: String,
-        },
-        house: {
-          type: String,
-        },
-        appartment: {
-          type: String,
-        },
-      },
+    addresses: {
+      type: [addressSchema],
+      default: [],
     },
     wishes: {
       type: Array,
@@ -68,13 +75,11 @@ const userSchema = new Schema(
 );
 
 const registerSchema = Joi.object({
-  name: Joi.string().required(),
+  firstName: Joi.string().required(),
+  lastName: Joi.string().required(),
   email: Joi.string().required(),
   password: Joi.string().min(6).required(),
-  phone: Joi.string()
-    .pattern(/^\+380\d{9}$/)
-    .required(),
-  gReCaptchaToken: Joi.string(),
+  phone: Joi.string().required(),
 });
 
 const loginSchema = Joi.object({

@@ -4,6 +4,9 @@ const getOrder = require('./getOrder');
 const createWaybill = require('./createWaybill');
 const createSignature = require('./createSignature');
 const liqpay = require('./liqpay');
+const getOrdersByIds = require('./getOrdersByIds');
+const updateOrderField = require('./updateOrderField');
+const deleteOrderByOrderId = require('./deleteOrderByOrderId');
 
 module.exports = {
   getAllOrders,
@@ -11,5 +14,8 @@ module.exports = {
   getOrder,
   createWaybill,
   createSignature,
-  liqpay
+  liqpay,
+  getOrdersByIds,
+  updateOrderField,
+  deleteOrderByOrderId
 }

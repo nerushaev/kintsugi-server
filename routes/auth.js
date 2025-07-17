@@ -9,6 +9,8 @@ const { schemas } = require("../models/user");
 
 const router = express.Router();
 
+router.get("/user", authenticate, ctrlWrapper(authCtrl.getUserData));
+
 router.post(
   "/register",
   validation(schemas.registerSchema),
@@ -27,10 +29,16 @@ router.post("/logout", authenticate, ctrlWrapper(authCtrl.logout));
 
 router.get("/refresh", ctrlWrapper(authCtrl.refresh));
 
-router.patch(
-  "/updateUserDelivery",
+router.post(
+  "/addDeliveryAddress",
   authenticate,
-  ctrlWrapper(authCtrl.updateUserDelivery)
+  ctrlWrapper(authCtrl.addDeliveryAddress)
+);
+
+router.delete(
+  "/deleteDeliveryAddress/:addressId",
+  authenticate,
+  ctrlWrapper(authCtrl.deleteDeliveryAddress)
 );
 
 router.patch("/updateUser", authenticate, ctrlWrapper(authCtrl.updateUser));
