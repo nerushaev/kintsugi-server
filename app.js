@@ -8,6 +8,7 @@ const cors = require("cors");
 const allowedOrigins = [
   "https://kintsugi.org.ua",
   "https://www.kintsugi.org.ua",
+  "http://localhost:3000"
 ];
 // const origin = "http://localhost:3000";
 // const origin = "http://www.kintsugi.org.ua";
