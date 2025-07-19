@@ -26,18 +26,18 @@ const refresh = async (req, res) => {
   });
 
 res.cookie("refreshToken", tokens.refreshToken, {
-  sameSite: "Lax",
+  sameSite: "None",
   httpOnly: true,
   secure: true,
-  domain: undefined,
+  domain: ".kintsugi.org.ua",
   maxAge: 30 * 24 * 60 * 60 * 1000,
 });
 
 res.cookie("token", tokens.token, {
-  sameSite: "Lax",
+  sameSite: "None",
   httpOnly: true,
   secure: true,
-  domain: undefined,
+  domain: ".kintsugi.org.ua",
   maxAge: 15 * 60 * 1000, // например, 15 минут для access token
 });
 
