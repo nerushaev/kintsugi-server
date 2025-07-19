@@ -132,7 +132,7 @@ const addOrder = async (req, res) => {
 
     const userOrderMessage = {
       from: KINTSUGI_GMAIL,
-      to: "kolyanerushaev@gmail.com",
+      to: email,
       subject: `Ваше замовлення ${orderId} підтверджено!`,
       html: `
         <h2>Дякуємо за замовлення!</h2>
