@@ -14,10 +14,11 @@ router.get("/search", ctrlWrapper(productCtrl.getProductsByName));
 router.get("/wish", authenticate, ctrlWrapper(productCtrl.getWishListProduct));
 
 router.get("/", productCtrl.getProducts);
+router.get("/all", ctrlWrapper(productCtrl.getAllProducts));
+
 
 router.get("/:category", productCtrl.getProducts);
 
-router.get("/all", ctrlWrapper(productCtrl.getAllProducts));
 
 router.get("/getNames", ctrlWrapper(productCtrl.getAllProductsName));
 
