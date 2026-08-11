@@ -3,13 +3,12 @@ const Order = require("../../models/order");
 const { transport } = require("../../middleware");
 
 const {
+  adminOrderEmails,
   emailDetails,
   emailLayout,
   formatMoney,
   mailFrom,
 } = require("../../helpers/emailTemplates");
-const ADMIN_ORDER_EMAIL = process.env.ADMIN_ORDER_EMAIL || "kolyanerushaev@gmail.com";
-
 const MONOBANK_PUBLIC_KEY =
   "LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUZrd0V3WUhLb1pJemowQ0FRWUlLb1pJemowREFRY0RRZ0FFc05mWXpNR1hIM2VXVHkzWnFuVzVrM3luVG5CYgpnc3pXWnhkOStObEtveDUzbUZEVTJONmU0RlBaWmsvQmhqamgwdTljZjVFL3JQaU1EQnJpajJFR1h3PT0KLS0tLS1FTkQgUFVCTElDIEtFWS0tLS0tCg==";
 const ALLOWED_STATUSES = new Set([
@@ -70,7 +69,7 @@ const sendPaymentNotifications = async (order) => {
       field: "adminPaymentNotifiedAt",
       message: {
         from: mailFrom,
-        to: ADMIN_ORDER_EMAIL,
+        to: adminOrderEmails,
         subject: `Замовлення ${order.orderId} оплачено`,
         html: emailLayout({
           eyebrow: "ОПЛАТА ОТРИМАНА",

@@ -6,6 +6,7 @@ const RandExp = require("randexp");
 const { transport } = require("../../middleware");
 const { monoPay } = require("../../helpers");
 const {
+  adminOrderEmails,
   emailDetails,
   emailItems,
   emailLayout,
@@ -392,11 +393,9 @@ const addOrder = async (req, res) => {
       ["Коментар", deliveryComments],
     ])}${orderSummary}`,
   });
-  const adminEmail = process.env.ADMIN_ORDER_EMAIL || "kolyanerushaev@gmail.com";
-
   const notificationResults = await Promise.allSettled([
     transport.sendMail({ from: mailFrom, to: email, subject: `Замовлення ${orderId} прийнято`, html: customerMailHtml }),
-    transport.sendMail({ from: mailFrom, to: adminEmail, subject: `Нове замовлення ${orderId}`, html: adminMailHtml }),
+    transport.sendMail({ from: mailFrom, to: adminOrderEmails, subject: `Нове замовлення ${orderId}`, html: adminMailHtml }),
   ]);
   if (notificationResults.some(({ status }) => status === "rejected")) {
     console.error(`Order ${orderId}: one or more notification emails failed`);

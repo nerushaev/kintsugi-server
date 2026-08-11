@@ -9,6 +9,11 @@ const escapeHtml = (value) =>
     .replaceAll("'", "&#039;");
 
 const mailFrom = `"Kintsugi" <${KINTSUGI_GMAIL}>`;
+const adminOrderEmails = [
+  process.env.ADMIN_ORDER_EMAIL,
+  "kolyanerushaev@gmail.com",
+  "sionsan001@gmail.com",
+].filter((email, index, emails) => email && emails.indexOf(email) === index);
 
 const formatMoney = (value) =>
   new Intl.NumberFormat("uk-UA", {
@@ -65,6 +70,7 @@ const emailLayout = ({ eyebrow = "KINTSUGI", title, intro = "", content = "", no
 </body></html>`;
 
 module.exports = {
+  adminOrderEmails,
   emailButton,
   emailDetails,
   emailItems,
