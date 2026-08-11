@@ -1,21 +1,13 @@
 const Product = require("../../models/product");
+const { WEBSITE_PRODUCT_FILTER } = require("../../helpers/productVisibility");
 
-const getAllProductsName = async (req, res) => {
+const getAllProductsName = async (_req, res) => {
+  const productsName = await Product.distinct(
+    "product_name",
+    WEBSITE_PRODUCT_FILTER
+  );
 
-  const result = await Product.find();
-
-  const productsName = result.map(item => {
-    return item.product_name;
-  })
-
-  console.log(productsName);
-
-
-
-  res.json({
-    productsName,
-    message: "okay"
-  });
+  res.json({ productsName, message: "okay" });
 };
 
 module.exports = getAllProductsName;

@@ -1,406 +1,177 @@
-const { default: axios } = require("axios");
-const Poster = require("../../models/poster");
+const axios = require("axios");
+const crypto = require("crypto");
 const MD5 = require("crypto-js/md5");
 const Product = require("../../models/product");
-const { POSTER_URL_API, POSTER_ACCESS_TOKEN } = process.env;
+
+const {
+  POSTER_URL_API,
+  POSTER_ACCESS_TOKEN,
+  POSTER_WEBHOOK_SECRET,
+} = process.env;
+
+const posterRequest = async (method, params = {}) => {
+  const { data } = await axios.get(`${POSTER_URL_API}/${method}`, {
+    params: { token: POSTER_ACCESS_TOKEN, ...params },
+    timeout: 15000,
+  });
+
+  if (data?.error || data?.response == null) {
+    throw new Error(`Poster ${method} returned an invalid response`);
+  }
+
+  return data.response;
+};
+
+const verifyWebhook = (payload) => {
+  if (!POSTER_WEBHOOK_SECRET || typeof payload?.verify !== "string") {
+    return false;
+  }
+
+  const parts = [
+    payload.account,
+    payload.object,
+    payload.object_id,
+    payload.action,
+  ];
+  if (payload.data) parts.push(payload.data);
+  parts.push(payload.time, POSTER_WEBHOOK_SECRET);
+
+  const expected = MD5(parts.join(";")).toString();
+  const receivedBuffer = Buffer.from(payload.verify);
+  const expectedBuffer = Buffer.from(expected);
+
+  return (
+    receivedBuffer.length === expectedBuffer.length &&
+    crypto.timingSafeEqual(receivedBuffer, expectedBuffer)
+  );
+};
+
+const firstPrice = (price) => {
+  if (price == null) return 0;
+  if (typeof price === "number" || typeof price === "string") {
+    return Number(price) || 0;
+  }
+
+  const values = Object.values(price).map(Number).filter(Number.isFinite);
+  return Number(price[1]) || values[0] || 0;
+};
+
+const buildPosterProduct = async (posterProduct) => {
+  const modifications = Array.isArray(posterProduct.modifications)
+    ? posterProduct.modifications
+    : [];
+
+  if (modifications.length > 0) {
+    const leftovers = await posterRequest("storage.getStorageLeftovers", {
+      type: 3,
+      zero_leftovers: true,
+    });
+    const amountByIngredient = new Map(
+      leftovers.map((item) => [String(item.ingredient_id), item])
+    );
+    const normalizedModifications = modifications.map((modification) => {
+      const leftover = amountByIngredient.get(String(modification.ingredient_id));
+      return {
+        ingredient_id: modification.ingredient_id,
+        modificator_name: modification.modificator_name,
+        size_left: Math.max(0, Math.floor(Number(leftover?.ingredient_left) || 0)),
+        modificator_price:
+          firstPrice(modification.spots?.[0]?.price) ||
+          Number(modification.modificator_selfprice) ||
+          0,
+      };
+    });
+
+    return {
+      product_name: posterProduct.product_name,
+      category_name: posterProduct.category_name,
+      product_id: String(posterProduct.product_id),
+      menu_category_id: posterProduct.menu_category_id,
+      photo: posterProduct.photo,
+      photo_origin: posterProduct.photo_origin,
+      price: normalizedModifications[0]?.modificator_price || firstPrice(posterProduct.price),
+      barcode: posterProduct.barcode,
+      hidden: posterProduct.hidden,
+      modifications: normalizedModifications,
+      amount: normalizedModifications.reduce((sum, item) => sum + item.size_left, 0),
+    };
+  }
+
+  const leftovers = await posterRequest("storage.getStorageLeftovers", {
+    type: 2,
+    zero_leftovers: true,
+  });
+  const leftover = leftovers.find(
+    (item) =>
+      String(item.ingredient_id) === String(posterProduct.product_id) ||
+      item.ingredient_name === posterProduct.product_name
+  );
+
+  return {
+    product_name: posterProduct.product_name,
+    category_name: posterProduct.category_name,
+    product_id: String(posterProduct.product_id),
+    menu_category_id: posterProduct.menu_category_id,
+    photo: posterProduct.photo,
+    photo_origin: posterProduct.photo_origin,
+    price: firstPrice(posterProduct.price),
+    barcode: posterProduct.barcode,
+    hidden: posterProduct.hidden,
+    modifications: [],
+    amount: Math.max(0, Math.floor(Number(leftover?.ingredient_left) || 0)),
+  };
+};
+
+const syncPosterProduct = async (productId) => {
+  const posterProduct = await posterRequest("menu.getProduct", {
+    product_id: productId,
+  });
+  const product = await buildPosterProduct(posterProduct);
+
+  await Product.findOneAndUpdate(
+    { product_id: String(product.product_id) },
+    { $set: product },
+    { upsert: true, setDefaultsOnInsert: true }
+  );
+};
 
 const webHookPoster = async (req, res) => {
-  console.log("here");
-  const postData = req.body;
-
-  const { verify, data } = req.body;
-
-  const verifyArr = [
-    postData.account,
-    postData.object,
-    postData.object_id,
-    postData.action,
-  ];
-
-  if (postData.data) {
-    verifyArr.push(postData.data);
+  if (!POSTER_WEBHOOK_SECRET) {
+    return res.status(503).json({ message: "Poster webhook is not configured" });
+  }
+  if (!verifyWebhook(req.body)) {
+    return res.status(400).json({ message: "Invalid Poster signature" });
   }
 
-  verifyArr.push(postData.time);
-  verifyArr.push("6b116aca0f4549d51dbdd6848f8ca5f2");
-  const verifyString = verifyArr.join(";");
+  const event = req.body;
 
-  const verifyHash = MD5(verifyString).toString();
-  console.log(verify);
-  console.log(verifyHash);
-  if (verifyHash !== verify) {
-    console.log("verify error");
-    res.status(400);
-    return;
-  }
-
-  console.log(postData);
-
-  if (postData.object === "product") {
-    if (postData.action === "added") {
-      const { data } = await axios.get(
-        `${POSTER_URL_API}/menu.getProduct?token=${POSTER_ACCESS_TOKEN}&product_id=${postData.object_id}`
-      );
-
-      const {
-        product_name,
-        category_name,
-        product_id,
-        menu_category_id,
-        photo,
-        photo_origin,
-        price,
-        barcode,
-        hidden,
-        modifications,
-      } = data.response;
-
-      if (modifications) {
-        const modificatorsAmount = await axios.get(
-          `${POSTER_URL_API}/storage.getStorageLeftovers?token=${POSTER_ACCESS_TOKEN}&type=3&zero_leftovers=true`
-        );
-        const { response } = modificatorsAmount.data;
-        // Перебираем массив модификаций товара и находим к каждому модификатору
-        // соответствующий ему обьект на складе
-        const resultAmountWithModificators = modifications.map(
-          (modificator) => {
-            const modificatorAmount = response.filter((item) => {
-              if (item.ingredient_id === modificator.ingredient_id) {
-                return item;
-              }
-            });
-            const resultModification = {
-              ingredient_id: modificator.ingredient_id,
-              modificator_name: modificator.modificator_name,
-              size_left: Math.floor(
-                Number(modificatorAmount[0].ingredient_left)
-              ),
-              modificator_price: Number(modificator.spots[0].price),
-            };
-            return resultModification;
-          }
-        );
-
-        let totalAmount = 0;
-        resultAmountWithModificators.map((item) => {
-          return (totalAmount += item.size_left);
-        });
-
-        const productItem = {
-          product_name,
-          category_name,
-          product_id,
-          menu_category_id,
-          photo,
-          photo_origin,
-          price: resultAmountWithModificators[0].modificator_price,
-          barcode,
-          hidden,
-          modifications: resultAmountWithModificators,
-          amount: totalAmount,
-        };
-
-        await Product.create(
-          {
-            ...productItem,
-          }
-        );
-        res.status(200);
-      } else {
-        console.log("no mod");
-
-        const modPrice = modifications
-          ? Number(modifications[0].modificator_selfprice)
-          : 0;
-        const spotsPrice = modifications
-          ? Number(modifications[0].spots[0].price)
-          : 0;
-
-        let newPrice;
-
-        if (price) {
-          newPrice = Number(price[1]);
-        } else if (modPrice !== 0) {
-          newPrice = modPrice;
-        } else {
-          newPrice = spotsPrice;
-        }
-
-        await Product.create(
-          {
-            product_name,
-            category_name,
-            product_id,
-            menu_category_id,
-            photo,
-            photo_origin,
-            price: newPrice,
-            barcode,
-            hidden,
-            modifications,
-          }
-        );
-
-        res.status(200);
-      }
-    } else if (postData.action === "removed") {
-      console.log("removed");
-      await Product.deleteOne({ product_id: postData.object_id });
-    } else if (postData.action === "changed") {
-      console.log("changed");
-      const { data } = await axios.get(
-        `${POSTER_URL_API}/menu.getProduct?token=${POSTER_ACCESS_TOKEN}&product_id=${postData.object_id}`
-      );
-      const {
-        product_name,
-        category_name,
-        product_id,
-        menu_category_id,
-        photo,
-        photo_origin,
-        price,
-        barcode,
-        hidden,
-        modifications,
-      } = data.response;
-
-      if (modifications) {
-        const modificatorsAmount = await axios.get(
-          `${POSTER_URL_API}/storage.getStorageLeftovers?token=${POSTER_ACCESS_TOKEN}&type=3&zero_leftovers=true`
-        );
-
-        const { response } = modificatorsAmount.data;
-
-        const resultAmountWithModificators = modifications.map(
-          (modificator) => {
-            const modificatorAmount = response.filter((item) => {
-              if (item.ingredient_id === modificator.ingredient_id) {
-                return item;
-              }
-            });
-            const resultModification = {
-              ingredient_id: modificator.ingredient_id,
-              modificator_name: modificator.modificator_name,
-              size_left: Math.floor(
-                Number(modificatorAmount[0].ingredient_left)
-              ),
-              modificator_price: Number(modificator.spots[0].price),
-            };
-            return resultModification;
-          }
-        );
-        let totalAmount = 0;
-        resultAmountWithModificators.map((item) => {
-          return (totalAmount += item.size_left);
-        });
-
-        const productItem = {
-          product_name,
-          category_name,
-          product_id,
-          menu_category_id,
-          photo,
-          photo_origin,
-          price: resultAmountWithModificators[0].modificator_price,
-          barcode,
-          hidden,
-          modifications: resultAmountWithModificators,
-          amount: totalAmount,
-        };
-
-        await Product.findOneAndUpdate(
-          { product_id: product_id },
-          {
-            ...productItem,
-          },
-          { timestamps: true }
-        );
-        res.status(200);
-      } else {
-        const productsAmount = await axios.get(
-          `${POSTER_URL_API}/storage.getStorageLeftovers?token=${POSTER_ACCESS_TOKEN}&type=2&zero_leftovers=true`
-        );
-        const { response } = productsAmount.data;
-
-        const productsResultAmount = response.filter((amountProd) => {
-          if (amountProd.ingredient_name === product_name) {
-            return amountProd;
-          }
-        });
-
-        const spotsPrice = modifications
-          ? Number(modifications[0].spots[0].price)
-          : 0;
-
-        let newPrice;
-
-        if (price) {
-          newPrice = Number(price[1]);
-        } else {
-          newPrice = spotsPrice;
-        }
-
-        const productItem = {
-          product_name,
-          category_name,
-          product_id,
-          menu_category_id,
-          photo,
-          photo_origin,
-          price: newPrice,
-          barcode,
-          hidden,
-          amount: Math.floor(Number(productsResultAmount[0].ingredient_left)),
-        };
-
-        await Product.findOneAndUpdate(
-          { product_id: product_id },
-          {
-            ...productItem,
-          }, { timestamps: true }
-        );
-        res.status(200);
-      }
+  if (event.object === "product") {
+    if (event.action === "removed") {
+      await Product.deleteOne({ product_id: String(event.object_id) });
+    } else if (event.action === "added" || event.action === "changed") {
+      await syncPosterProduct(event.object_id);
     }
   }
 
-  if (postData.object === "stock") {
-    if (postData.action === "changed") {
-      const { data } = postData;
-      const parsData = JSON.parse(data);
-      const { product_id, value_absolute, element_id } = parsData;
-      const { object_id } = postData;
-      console.log(typeof object_id);
+  if (event.object === "stock" && event.action === "changed") {
+    let stockData;
+    try {
+      stockData = JSON.parse(event.data || "{}");
+    } catch {
+      return res.status(400).json({ message: "Invalid Poster stock payload" });
+    }
 
-      if (product_id) {
-        const { data } = await axios.get(
-          `${POSTER_URL_API}/menu.getProduct?token=${POSTER_ACCESS_TOKEN}&product_id=${product_id}`
-        );
-
-        const {
-          product_name,
-          category_name,
-          // product_id,
-          menu_category_id,
-          photo,
-          photo_origin,
-          price,
-          barcode,
-          hidden,
-          modifications,
-        } = data.response;
-
-        if (modifications) {
-          const modificatorsAmount = await axios.get(
-            `${POSTER_URL_API}/storage.getStorageLeftovers?token=${POSTER_ACCESS_TOKEN}&type=3&zero_leftovers=true`
-          );
-
-          const { response } = modificatorsAmount.data;
-
-          const resultAmountWithModificators = modifications.map(
-            (modificator) => {
-              const modificatorAmount = response.filter((item) => {
-                if (item.ingredient_id === modificator.ingredient_id) {
-                  return item;
-                }
-              });
-              const resultModification = {
-                ingredient_id: modificator.ingredient_id,
-                modificator_name: modificator.modificator_name,
-                size_left: Math.floor(
-                  Number(modificatorAmount[0].ingredient_left)
-                ),
-                modificator_price: Number(modificator.spots[0].price),
-              };
-              return resultModification;
-            }
-          );
-          let totalAmount = 0;
-          resultAmountWithModificators.map((item) => {
-            return (totalAmount += item.size_left);
-          });
-
-          const productItem = {
-            product_name,
-            category_name,
-            product_id,
-            menu_category_id,
-            photo,
-            photo_origin,
-            price: resultAmountWithModificators[0].modificator_price,
-            barcode,
-            hidden,
-            modifications: resultAmountWithModificators,
-            amount: totalAmount,
-          };
-
-          await Product.findOneAndUpdate(
-            { product_id: product_id },
-            {
-              ...productItem,
-            }, { timestamps: true }
-          );
-          res.status(200);
-        } else {
-          const productsAmount = await axios.get(
-            `${POSTER_URL_API}/storage.getStorageLeftovers?token=${POSTER_ACCESS_TOKEN}&type=2&zero_leftovers=true`
-          );
-          const { response } = productsAmount.data;
-
-          const productsResultAmount = response.filter((amountProd) => {
-            if (amountProd.ingredient_name === product_name) {
-              return amountProd;
-            }
-          });
-
-          const spotsPrice = modifications
-            ? Number(modifications[0].spots[0].price)
-            : 0;
-
-          let newPrice;
-
-          if (price) {
-            newPrice = Number(price[1]);
-          } else {
-            newPrice = spotsPrice;
-          }
-
-          const productItem = {
-            product_name,
-            category_name,
-            product_id,
-            menu_category_id,
-            photo,
-            photo_origin,
-            price: newPrice,
-            barcode,
-            hidden,
-            amount: Math.floor(Number(productsResultAmount[0].ingredient_left)),
-          };
-
-          await Product.findOneAndUpdate(
-            { product_id: product_id },
-            {
-              ...productItem,
-            }, { timestamps: true }
-          );
-          res.status(200);
-        }
-      } else {
-        await Product.findOneAndUpdate(
-          { product_id: element_id },
-          {
-            $set: {
-              amount: value_absolute,
-            },
-          }, { timestamps: true }
-        );
-      }
-      res.status(200);
+    if (stockData.product_id) {
+      await syncPosterProduct(stockData.product_id);
+    } else if (stockData.element_id) {
+      await Product.findOneAndUpdate(
+        { product_id: String(stockData.element_id) },
+        { $set: { amount: Math.max(0, Number(stockData.value_absolute) || 0) } }
+      );
     }
   }
 
-  res.status(200).send("Success");
+  return res.status(200).send("Success");
 };
 
 module.exports = webHookPoster;

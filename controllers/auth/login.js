@@ -1,51 +1,31 @@
-const { User } = require("../../models/user");
 const bcrypt = require("bcrypt");
-const { generateTokens, RequestError } = require("../../helpers");
+const { User } = require("../../models/user");
+const { generateTokens } = require("../../helpers");
 const { success, failure } = require("../../helpers/response");
+const { getAuthCookieOptions } = require("../../helpers/authCookies");
 
 const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
-    const user = await User.findOne({ email });
+    const email = String(req.body.email).trim().toLowerCase();
+    const { password } = req.body;
+    const user = await User.findOne({ email }).select("+password");
 
-    if (!user) {
-      return failure(
-        res,
-        "Такого користувача не існує, перевірьте правильність вказаної пошти!",
-        404,
-        "USER_NOT_FOUND"
-      );
-    }
-
-    const passwordCompare = await bcrypt.compare(password, user.password);
-
-    if (!passwordCompare) {
-      return failure(res, "Невірний пароль!", 401, "WRONG_PASSWORD");
+    if (!user || !(await bcrypt.compare(password, user.password))) {
+      return failure(res, "Невірна пошта або пароль", 401, "INVALID_CREDENTIALS");
     }
 
     const { token, refreshToken } = await generateTokens(user._id);
-    await User.findByIdAndUpdate(user._id, { token, refreshToken });
-    console.log("token", token);
-    console.log("refreshToken", refreshToken);
+    await User.findByIdAndUpdate(user._id, { refreshToken });
+
     res
-      .cookie("refreshToken", refreshToken, {
-        sameSite: "None",
-        httpOnly: true,
-        secure: true,
-        domain: ".kintsugi.org.ua",
-        maxAge: 30 * 24 * 60 * 60 * 1000,
-      })
-      .cookie("token", token, {
-        sameSite: "None",
-        httpOnly: true,
-        secure: true,
-        domain: ".kintsugi.org.ua",
-        maxAge: 30 * 24 * 60 * 60 * 1000,
-      });
-    return success(res, { token, user }, "Авторизація успішна!");
+      .cookie("refreshToken", refreshToken, getAuthCookieOptions(req, 30 * 24 * 60 * 60 * 1000))
+      .cookie("token", token, getAuthCookieOptions(req, 12 * 60 * 60 * 1000));
+
+    const safeUser = await User.findById(user._id);
+    return success(res, { token, user: safeUser }, "Авторизація успішна!");
   } catch (error) {
-    console.error("Login error:", error);
-    return failure(res, "Помилка авторизації", 500, error.message || error);
+    console.error("Login error:", error.message);
+    return failure(res, "Помилка авторизації", 500, "LOGIN_FAILED");
   }
 };
 

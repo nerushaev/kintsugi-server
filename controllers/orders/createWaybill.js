@@ -33,7 +33,6 @@ const createWaybill = async (req, res) => {
 
   const recipient = await createRecipient(order[0]);
   const data = await createWaybill(recipient);
-  console.log(data);
   if (data) {
     await Order.findByIdAndUpdate({_id}, {$set: {orderRef: data.data[0].IntDocNumber}});
     await Order.findByIdAndUpdate({_id}, {accepted: true});

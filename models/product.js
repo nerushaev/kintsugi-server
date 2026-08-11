@@ -23,6 +23,7 @@ const productSchema = new Schema({
   },
   product_id: {
     type: String,
+    index: true,
   },
   price: { 
     type: Number
@@ -55,11 +56,16 @@ const productSchema = new Schema({
   },
   favorite: {
     type: Boolean
+  },
+  websiteHidden: {
+    type: Boolean,
+    default: false,
   }
 }, { versionKey: false, timestamps: true }
 );
 
 productSchema.index({product_name: 'text'});
+productSchema.index({ category_name: 1, amount: 1, price: 1 });
 
 const Product = model("product", productSchema);
 

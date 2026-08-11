@@ -1,14 +1,14 @@
 const Product = require("../../models/product");
+const { WEBSITE_PRODUCT_FILTER } = require("../../helpers/productVisibility");
 
 const getWishListProduct = async (req, res) => {
-  console.log("🚀 Контроллер вызван");
-  const { user } = req;
-  const { wishes } = user;
-  const result = await Product.find().where("product_id").in(wishes).exec();
+  const wishes = Array.isArray(req.user?.wishes) ? req.user.wishes : [];
+  const products = await Product.find({
+    ...WEBSITE_PRODUCT_FILTER,
+    product_id: { $in: wishes },
+  }).lean();
 
-  res.status(200).json({
-    products: result,
-  });
+  res.status(200).json({ products });
 };
 
 module.exports = getWishListProduct;

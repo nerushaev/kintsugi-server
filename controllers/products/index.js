@@ -12,6 +12,8 @@ const monobankWebhook = require("./monobankWebhook");
 const updateDescription = require("./updateDescription");
 const getFavoriteProduct = require("./getFavoriteProduct");
 const checkAvailability = require("./checkAvailability");
+const updateWebsiteVisibility = require("./updateWebsiteVisibility");
+const reorderProductPhotos = require("./reorderProductPhotos");
 
 module.exports = {
   getProducts,
@@ -27,5 +29,7 @@ module.exports = {
   monobankWebhook,
   updateDescription,
   getFavoriteProduct,
-  checkAvailability
+  checkAvailability,
+  updateWebsiteVisibility,
+  reorderProductPhotos,
 };

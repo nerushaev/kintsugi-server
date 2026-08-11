@@ -1,43 +1,40 @@
 const Product = require("../../models/product");
 const fs = require("fs/promises");
-const cloudinary = require("cloudinary").v2;
 const { uploads } = require("../../middleware/cloudinary");
 
 const updatePhotoProductById = async (req, res) => {
-  const uploader = async (path) => await uploads(path, "photo_extra");
-  const urls = [];
   const { product_id } = req.params;
-  const product = await Product.find({ product_id: product_id });
+  const files = Array.isArray(req.files) ? req.files : [];
 
+  if (!files.length) {
+    return res.status(400).json({ message: "Оберіть хоча б одне фото" });
+  }
 
-  if (req.files) {
-    const files = req.files;
+  const product = await Product.findOne({ product_id });
+  if (!product) {
+    await Promise.allSettled(files.map(({ path }) => fs.unlink(path)));
+    return res.status(404).json({ message: "Товар не знайдено" });
+  }
 
+  const uploadedPhotos = [];
+  try {
     for (const file of files) {
-      const { path } = file;
-      const newPath = await uploader(path);
-      urls.push(newPath);
-      fs.unlink(path);
+      uploadedPhotos.push(await uploads(file.path, "photo_extra"));
     }
+  } finally {
+    await Promise.allSettled(files.map(({ path }) => fs.unlink(path)));
   }
 
-  const resultPhotos = [...product[0].photo_extra, ...urls];
+  product.photo_extra = [
+    ...(Array.isArray(product.photo_extra) ? product.photo_extra : []),
+    ...uploadedPhotos,
+  ];
+  await product.save();
 
-  const updateQuery = { $set: {} };
-
-  if (urls) {
-    updateQuery.$set.photo_extra = resultPhotos;
-  } else {
-    updateQuery.$set = req.body;
-  }
-
-
-  const result = await Product.findOneAndUpdate({product_id: product_id}, updateQuery, { new: true });
-
-  if (!result) {
-    throw NotFound(`Product with id=${product_id} not found...`);
-  }
-  res.json(result);
+  res.json({
+    product: product.toObject(),
+    message: "Фото додано",
+  });
 };
 
 module.exports = updatePhotoProductById;

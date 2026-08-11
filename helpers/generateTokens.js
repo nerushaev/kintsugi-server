@@ -9,10 +9,6 @@ const generateTokens = async (_id) => {
     expiresIn: "30d",
   });
 
-console.log("ACCESS_SECRET_KEY:", ACCESS_SECRET_KEY);
-console.log("REFRESH_SECRET_KEY:", REFRESH_SECRET_KEY);
-
-
   return { token, refreshToken };
 };
 

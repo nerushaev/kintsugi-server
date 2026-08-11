@@ -2,12 +2,15 @@ const { RequestError } = require("../helpers");
 
 const validation = (schema) => {
   return (req, res, next) => {
-    const { error } = schema.validate(req.body);
-    console.log(error);
+    const { error, value } = schema.validate(req.body, {
+      abortEarly: false,
+      stripUnknown: true,
+    });
     if (error) {
-      next(RequestError(400, error));
+      return next(RequestError(400, error.details?.[0]?.message || "Invalid request"));
     }
-    next();
+    req.body = value;
+    return next();
   };
 };
 

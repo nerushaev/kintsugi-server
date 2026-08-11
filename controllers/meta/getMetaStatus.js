@@ -1,39 +1,48 @@
 const Product = require("../../models/product");
-const ProductMeta = require("../../models/productsMeta");
+const { WEBSITE_PRODUCT_FILTER } = require("../../helpers/productVisibility");
 
-const getMetaStatus = async (req, res) => {
-  try {
-    const productIds = await Product.distinct('product_id');
-    const metas = await ProductMeta.find({}, 'product_id tags type color fandom character');
+const hasImage = (product) =>
+  Boolean(
+    product.photo ||
+      product.photo_origin ||
+      (Array.isArray(product.photo_extra) && product.photo_extra.length)
+  );
 
-    // Список id товаров, для которых есть meta
-    const metaProductIds = metas.map(meta => meta.product_id);
+const hasDescription = (product) =>
+  typeof product.description === "string" && product.description.trim().length > 0;
 
-    // Товары без meta вообще
-    const productsWithoutMeta = productIds.filter(id => !metaProductIds.includes(id));
+const getMetaStatus = async (_req, res) => {
+  const products = await Product.find(
+    WEBSITE_PRODUCT_FILTER,
+    "product_id photo photo_origin photo_extra description"
+  ).lean();
+  const productIds = [...new Set(products.map(({ product_id }) => product_id))];
+  const productsWithoutPhotoIds = [];
+  const productsWithoutDescriptionIds = [];
+  const criticalIssueIds = new Set();
 
-    // Товары, у которых meta есть, но поля пустые
-    const metasWithMissingFields = metas.filter(meta => {
-      return (
-        !meta.tags || meta.tags.length === 0 ||
-        !meta.type || meta.type.length === 0 ||
-        !meta.color || meta.color.length === 0 
-      );
-    });
+  for (const product of products) {
+    const productId = product.product_id;
+    const missingPhoto = !hasImage(product);
+    const missingDescription = !hasDescription(product);
 
-    const productsWithBadMetaIds = metasWithMissingFields.map(meta => meta.product_id);
-
-    res.json({
-      totalProducts: productIds.length,
-      productsWithoutMetaCount: productsWithoutMeta.length,
-      productsWithBadMetaCount: productsWithBadMetaIds.length,
-      productsWithoutMetaIds: productsWithoutMeta,
-      productsWithBadMetaIds: productsWithBadMetaIds,
-    });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Ошибка получения статуса мета-данных' });
+    if (missingPhoto) productsWithoutPhotoIds.push(productId);
+    if (missingDescription) productsWithoutDescriptionIds.push(productId);
+    if (missingPhoto || missingDescription) criticalIssueIds.add(productId);
   }
+
+  const productsRequiringAttentionCount = criticalIssueIds.size;
+
+  res.json({
+    totalProducts: productIds.length,
+    readyProductsCount: productIds.length - criticalIssueIds.size,
+    productsRequiringAttentionCount,
+    criticalIssueCount: criticalIssueIds.size,
+    productsWithoutPhotoCount: new Set(productsWithoutPhotoIds).size,
+    productsWithoutDescriptionCount: new Set(productsWithoutDescriptionIds).size,
+    productsWithoutPhotoIds: [...new Set(productsWithoutPhotoIds)],
+    productsWithoutDescriptionIds: [...new Set(productsWithoutDescriptionIds)],
+  });
 };
 
 module.exports = getMetaStatus;

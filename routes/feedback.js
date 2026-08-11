@@ -8,7 +8,5 @@ router.get("/:product_id", ctrlWrapper(feedbackCtrl.getFeedback));
 router.delete("/remove/:_id", authenticate, ctrlWrapper(feedbackCtrl.removeFeedback))
 // router.post("/", ctrlWrapper(orderCtrl.addOrder));
 // router.post("/createWaybill", authenticate, ctrlWrapper(orderCtrl.createWaybill));
-// router.post("/createSignature", ctrlWrapper(orderCtrl.createSignature));
-// router.post("/liqpay", ctrlWrapper(orderCtrl.liqpay));
 
 module.exports = router;

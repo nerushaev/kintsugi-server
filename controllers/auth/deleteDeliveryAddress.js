@@ -2,11 +2,14 @@
 
 const { failure, success } = require("../../helpers/response");
 const { User } = require("../../models/user");
+const { isValidObjectId } = require("mongoose");
 
 const deleteDeliveryAddress = async (req, res) => {
   const { addressId } = req.params;
   const userId = req.user._id;
-  console.log(addressId);
+  if (!isValidObjectId(addressId)) {
+    return failure(res, "Некоректний ідентифікатор адреси", 400, "INVALID_ADDRESS_ID");
+  }
   try {
     const updatedUser = await User.findByIdAndUpdate(
       userId,

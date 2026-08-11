@@ -1,215 +1,408 @@
 const Order = require("../../models/order");
+const Product = require("../../models/product");
+const Bundle = require("../../models/bundle");
 const { User } = require("../../models/user");
 const RandExp = require("randexp");
-const { KINTSUGI_GMAIL } = process.env;
 const { transport } = require("../../middleware");
 const { monoPay } = require("../../helpers");
+const {
+  emailDetails,
+  emailItems,
+  emailLayout,
+  formatMoney,
+  mailFrom,
+} = require("../../helpers/emailTemplates");
+const { WEBSITE_PRODUCT_FILTER } = require("../../helpers/productVisibility");
+const {
+  PERSON_NAME_PATTERN,
+  normalizePersonName,
+  normalizeEmail,
+  normalizeUkrainianPhone,
+  isUkrainianPhone,
+} = require("../../helpers/customerValidation");
+
+const PAYMENT_METHODS = new Set(["cash", "card"]);
+const DELIVERY_METHODS = new Set(["nova", "self"]);
+const NOVA_DELIVERY_TYPES = new Set(["branch", "postbox", "address"]);
+
+const cleanText = (value, maxLength = 300) =>
+  typeof value === "string" ? value.trim().slice(0, maxLength) : "";
+
+const positiveInteger = (value) => {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : 0;
+};
+
+const validateContact = ({ firstName, lastName, email, phone }) => {
+  if (!firstName || !lastName || !email || !phone) {
+    return "Заповніть ім’я, прізвище, пошту та номер телефону";
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return "Вкажіть коректну адресу електронної пошти";
+  }
+  if (!PERSON_NAME_PATTERN.test(firstName) || !PERSON_NAME_PATTERN.test(lastName)) {
+    return "Ім’я та прізвище можуть містити літери, пробіл, дефіс або апостроф";
+  }
+  if (!isUkrainianPhone(phone)) {
+    return "Вкажіть коректний номер телефону";
+  }
+  return "";
+};
+
+const normalizeAddress = (deliveryMethod, source = {}) => {
+  if (deliveryMethod === "self") {
+    return {
+      deliveryType: "self",
+      city: "",
+      warehouse: "",
+      postbox: "",
+      address: "",
+      house: "",
+      apartment: "",
+    };
+  }
+
+  const deliveryType = cleanText(source.deliveryType, 20);
+  const city = cleanText(source.city, 100);
+  if (!NOVA_DELIVERY_TYPES.has(deliveryType) || !city) {
+    throw new Error("INCOMPLETE_DELIVERY_ADDRESS");
+  }
+
+  const address = {
+    deliveryType,
+    city,
+    warehouse: cleanText(source.warehouse, 100),
+    postbox: cleanText(source.postbox, 100),
+    address: cleanText(source.address, 150),
+    house: cleanText(source.house, 30),
+    apartment: cleanText(source.apartment, 30),
+    cityRef: cleanText(source.cityRef, 80),
+    settlementRef: cleanText(source.settlementRef, 80),
+    warehouseRef: cleanText(source.warehouseRef, 80),
+    warehouseIndex: cleanText(source.warehouseIndex, 30),
+    streetRef: cleanText(source.streetRef, 80),
+  };
+
+  if (deliveryType === "branch" && !address.warehouse) {
+    throw new Error("INCOMPLETE_DELIVERY_ADDRESS");
+  }
+  if (deliveryType === "postbox" && !address.postbox) {
+    throw new Error("INCOMPLETE_DELIVERY_ADDRESS");
+  }
+  if (
+    deliveryType === "address" &&
+    (!address.address || !address.house)
+  ) {
+    throw new Error("INCOMPLETE_DELIVERY_ADDRESS");
+  }
+
+  return address;
+};
+
+const buildProducts = async (requestedProducts) => {
+  if (!Array.isArray(requestedProducts)) throw new Error("INVALID_CART");
+
+  const requested = requestedProducts.map((item) => ({
+    productId: cleanText(item?.product_id, 80),
+    amount: positiveInteger(item?.amount),
+    size: cleanText(item?.size, 80),
+  }));
+
+  if (requested.some((item) => !item.productId || !item.amount)) {
+    throw new Error("INVALID_CART");
+  }
+
+  const products = await Product.find({
+    ...WEBSITE_PRODUCT_FILTER,
+    product_id: { $in: [...new Set(requested.map(({ productId }) => productId))] },
+  }).lean();
+  const byId = new Map(products.map((product) => [product.product_id, product]));
+
+  return requested.map((item) => {
+    const product = byId.get(item.productId);
+    if (!product) throw new Error("PRODUCT_UNAVAILABLE");
+
+    let available = Number(product.amount) || 0;
+    if (item.size) {
+      const modification = product.modifications?.find(
+        (entry) => entry.modificator_name === item.size
+      );
+      available = Number(modification?.size_left) || 0;
+    }
+    if (available < item.amount) throw new Error("PRODUCT_UNAVAILABLE");
+
+    return {
+      product_id: product.product_id,
+      product_name: product.product_name,
+      category_name: product.category_name,
+      photo: product.photo,
+      photo_origin: product.photo_origin,
+      price: Number(product.price) || 0,
+      amount: item.amount,
+      ...(item.size && { size: item.size }),
+    };
+  });
+};
+
+const buildBundles = async (requestedBundles) => {
+  if (!Array.isArray(requestedBundles) || requestedBundles.length === 0) return [];
+
+  const requested = requestedBundles.map((item) => ({
+    bundleId: cleanText(item?.bundle_id, 80),
+    amount: positiveInteger(item?.amount),
+    selectedSizes: new Map(
+      Array.isArray(item?.products)
+        ? item.products.map((product) => [String(product.product_id), cleanText(product.size, 80)])
+        : []
+    ),
+  }));
+  if (requested.some((item) => !item.bundleId || !item.amount)) {
+    throw new Error("INVALID_CART");
+  }
+
+  const bundles = await Bundle.find({
+    bundle_id: { $in: requested.map(({ bundleId }) => bundleId) },
+    isActive: true,
+  }).populate("products").lean();
+  const byId = new Map(bundles.map((bundle) => [bundle.bundle_id, bundle]));
+
+  return requested.map((item) => {
+    const bundle = byId.get(item.bundleId);
+    if (!bundle) throw new Error("PRODUCT_UNAVAILABLE");
+
+    const products = bundle.products.map((product) => {
+      const size = item.selectedSizes.get(String(product.product_id)) || "";
+      let available = Number(product.amount) || 0;
+      if (size) {
+        const modification = product.modifications?.find(
+          (entry) => entry.modificator_name === size
+        );
+        available = Number(modification?.size_left) || 0;
+      }
+      if (product.websiteHidden || available < item.amount) {
+        throw new Error("PRODUCT_UNAVAILABLE");
+      }
+      return {
+        product_id: product.product_id,
+        product_name: product.product_name,
+        photo: product.photo,
+        photo_origin: product.photo_origin,
+        price: Number(product.price) || 0,
+        ...(size && { size }),
+      };
+    });
+
+    return {
+      bundle_id: bundle.bundle_id,
+      title: bundle.title,
+      newPrice: Number(bundle.newPrice || bundle.price) || 0,
+      amount: item.amount,
+      products,
+    };
+  });
+};
+
+const publicOrderResponse = (order) => ({
+  message: "Замовлення прийнято!",
+  orderId: order.orderId,
+  payments: order.paymentUrl
+    ? { invoiceId: order.paymentId, pageUrl: order.paymentUrl }
+    : undefined,
+  status: order.status,
+});
+
+const linkOrderToUser = async (email, orderId) => {
+  if (!email || !orderId) return;
+
+  await User.updateOne(
+    { email: normalizeEmail(email) },
+    { $addToSet: { orders: orderId } }
+  );
+};
 
 const addOrder = async (req, res) => {
-  console.log("+++ addOrder handler called");
+  const clientRequestId = cleanText(req.body.clientRequestId, 100);
+  if (!clientRequestId) {
+    return res.status(400).json({ message: "Не вдалося ідентифікувати замовлення" });
+  }
 
+  const existingOrder = await Order.findOne({ clientRequestId });
+  if (existingOrder) {
+    await linkOrderToUser(existingOrder.email, existingOrder.orderId);
+
+    if (existingOrder.payments === "card" && !existingOrder.paymentUrl) {
+      if (existingOrder.paymentStatus === "creating") {
+        return res.status(409).json({ message: "Сторінка оплати вже створюється. Зачекайте кілька секунд." });
+      }
+      try {
+        existingOrder.paymentStatus = "creating";
+        await existingOrder.save();
+        const invoice = await monoPay({
+          amount: Math.round(existingOrder.totalPrice * 100),
+          orderId: existingOrder.orderId,
+        });
+        existingOrder.paymentId = invoice.invoiceId;
+        existingOrder.paymentUrl = invoice.pageUrl;
+        existingOrder.paymentStatus = "unpaid";
+        await existingOrder.save();
+      } catch {
+        existingOrder.paymentStatus = "invoice_failed";
+        await existingOrder.save();
+        return res.status(502).json({ message: "Не вдалося створити сторінку оплати. Спробуйте ще раз." });
+      }
+    }
+    return res.status(200).json(publicOrderResponse(existingOrder));
+  }
+
+  const firstName = normalizePersonName(cleanText(req.body.firstName, 80));
+  const lastName = normalizePersonName(cleanText(req.body.lastName, 80));
+  const email = normalizeEmail(cleanText(req.body.email, 150));
+  const phone = normalizeUkrainianPhone(cleanText(req.body.phone, 30));
+  const payments = cleanText(req.body.payments, 20);
+  const deliveryMethod = cleanText(req.body.deliveryMethod, 20);
+  const deliveryComments = cleanText(req.body.deliveryComments, 1000);
+  const notCall = Boolean(req.body.notCall);
+
+  const contactError = validateContact({ firstName, lastName, email, phone });
+  if (contactError) return res.status(400).json({ message: contactError });
+  if (!PAYMENT_METHODS.has(payments) || !DELIVERY_METHODS.has(deliveryMethod)) {
+    return res.status(400).json({ message: "Оберіть доставку та спосіб оплати" });
+  }
+
+  let address;
+  let products;
+  let bundles;
   try {
-    console.log("1. Распаковали req.body:", req.body);
+    address = normalizeAddress(deliveryMethod, req.body.address);
+    [products, bundles] = await Promise.all([
+      buildProducts(req.body.products),
+      buildBundles(req.body.bundles),
+    ]);
+  } catch (error) {
+    if (error.message === "INCOMPLETE_DELIVERY_ADDRESS") {
+      return res.status(400).json({ message: "Заповніть адресу доставки" });
+    }
+    if (error.message === "PRODUCT_UNAVAILABLE") {
+      return res.status(409).json({ message: "Деякі товари вже недоступні у вибраній кількості" });
+    }
+    return res.status(400).json({ message: "Перевірте склад кошика" });
+  }
 
-    const {
-      email,
-      products,
-      bundles,
-      notCall,
+  if (products.length === 0 && bundles.length === 0) {
+    return res.status(400).json({ message: "Кошик порожній" });
+  }
+
+  const totalPrice =
+    products.reduce((sum, item) => sum + (item.price / 100) * item.amount, 0) +
+    bundles.reduce((sum, item) => sum + (item.newPrice / 100) * item.amount, 0);
+  if (!Number.isFinite(totalPrice) || totalPrice <= 0) {
+    return res.status(400).json({ message: "Не вдалося розрахувати суму замовлення" });
+  }
+
+  const orderId = new RandExp(/^[A-Z]{2}\d{10}$/).gen();
+  const now = new Date();
+  const date = `${String(now.getDate()).padStart(2, "0")}.${String(now.getMonth() + 1).padStart(2, "0")}.${now.getFullYear()}`;
+
+  let order;
+  try {
+    order = await Order.create({
+      clientRequestId,
+      orderId,
+      date,
       firstName,
       lastName,
+      email,
       phone,
       payments,
+      deliveryMethod,
+      deliveryComments,
+      notCall,
       address,
-      deliveryType, // деструктурили deliveryType
-      deliveryMethod, // добавил для ясности
-    } = req.body;
-
-    console.log("2. До User.findOne");
-    const user = await User.findOne({ email });
-    console.log("3. После User.findOne, user:", user);
-
-    const orderId = new RandExp(/^[A-Z]{2}\d{10}$/).gen();
-    console.log("4. Сгенерирован orderId:", orderId);
-
-    if (user) {
-      console.log("5. Апдейтим пользователя:", user._id);
-      await User.findByIdAndUpdate(user._id, { $push: { orders: orderId } });
-      console.log("6. Пользователь обновлён");
-    } else {
-      console.log("5. Пользователь не найден, пропускаем апдейт");
-    }
-
-    console.log("7. Начинаем подсчёт totalPrice");
-    let totalPrice = 0;
-    products.forEach((item) => {
-      totalPrice += (item.price / 100) * item.amount;
-    });
-    bundles.forEach((item) => {
-      totalPrice += (item.newPrice / 100) * item.amount;
-    });
-
-    // 6. Формат даты
-    const D = new Date();
-    const DateFormat =
-      ("0" + D.getDate()).slice(-2) +
-      "." +
-      ("0" + (D.getMonth() + 1)).slice(-2) +
-      "." +
-      D.getFullYear();
-    console.log("9. Сформатирована дата:", DateFormat);
-
-    // 7. Создание заказа в базе
-    console.log("10. До Order.create");
-    await Order.create({
-      orderId,
-      date: DateFormat,
+      products,
+      bundles,
       totalPrice,
-      ...req.body,
+      status: "new",
+      paymentStatus: payments === "card" ? "creating" : undefined,
     });
-
-    const deliveryHtml = (() => {
-      if (deliveryMethod === "nova") {
-        if (address.deliveryType === "branch" && address.warehouse) {
-          return `
-          <p>Місто: ${address.city}</p>
-          <p>Доставка на відділення Нової пошти: ${address.warehouse}</p>
-                  `;
-        }
-        if (address.deliveryType === "postbox" && address.postbox) {
-          return `
-          <p>Місто: ${address.city}</p>
-          <p>Доставка на поштову скриньку: ${address.postbox}</p>
-                  `;
-        }
-        if (address.deliveryType === "address" && address.address) {
-          return `
-          <p>Місто: ${address.city}</p>
-          <p>Доставка за адресою: ${address.address}, буд. ${address.house}, кв. ${address.apartment}</p>
-                  `;
-        }
+    await linkOrderToUser(email, orderId);
+  } catch (error) {
+    if (error?.code === 11000) {
+      const duplicate = await Order.findOne({ clientRequestId }).lean();
+      if (duplicate?.payments !== "card" || duplicate?.paymentUrl) {
+        return res.status(200).json(publicOrderResponse(duplicate));
       }
-      return `<p>Тип доставки: Самовивіз</p>`;
-    })();
-
-    const productsHtml = products
-      .map(
-        (item) => `
-      <div style="margin-bottom:15px;">
-        <img src="https://kintsugi.joinposter.com${
-          item.photo_origin || ""
-        }" alt="${item.product_name}" style="max-width:100px;"/><br/>
-        <strong>${item.product_name}</strong><br/>
-        ${item.size ? `<em>Розмір: ${item.size}</em><br/>` : ""}
-        Ціна: ${(item.price / 100).toFixed(2)} грн<br/>
-        Кількість: ${item.amount}
-      </div>`
-      )
-      .join("");
-
-    const bundlesHtmls = bundles?.map(
-      (item) =>
-        `
-      <div style="margin-bottom:15px;">
-        
-        <h3>${item.title}</h3><br/>
-        ${item.products
-          .map(
-            (item) => `
-      <div style="margin-bottom:15px;">
-        <img src="https://kintsugi.joinposter.com${
-          item.photo_origin || ""
-        }" alt="${item.product_name}" style="max-width:100px;"/><br/>
-        <strong>${item.product_name}</strong><br/>
-        ${item.size ? `<em>Розмір: ${item.size}</em><br/>` : ""}
-        Ціна: ${(item.price / 100).toFixed(2)} грн<br/>
-      </div>`
-          )
-          .join("")}
-        Ціна: ${(item.newPrice / 100).toFixed(2)} грн<br/>
-      </div>`
-    );
-
-    const userOrderMessage = {
-      from: KINTSUGI_GMAIL,
-      to: email,
-      subject: `Ваше замовлення ${orderId} підтверджено!`,
-      html: `
-        <h2>Дякуємо за замовлення!</h2>
-        <h3>Деталі замовлення:</h3>
-        ${productsHtml}
-        ${bundlesHtmls}
-        <h3>Загальна сума: ${totalPrice.toFixed(2)}грн</h3>
-        <h3>Доставка:</h3>
-        ${deliveryHtml}
-        <p>${notCall ? "Ви попросили не телефонувати." : ""}</p>
-        <p>Оплата: ${
-          payments === "card" ? "Онлайн оплата" : "Накладений платіж"
-        }</p>
-      `,
-    };
-
-    const adminOrderMessage = {
-      from: KINTSUGI_GMAIL,
-      to: "kolyanerushaev@gmail.com",
-      subject: `Нове замовлення ${orderId}`,
-      html: `
-        <h2>Нове замовлення ${orderId}</h2>
-        <h3>Інформація про покупця</h3>
-        <p>Ім'я: ${firstName} ${lastName}</p>
-        <p>Пошта: ${email}</p>
-        <p>Телефон: ${phone}</p>
-        <h3>Доставка:</h3>
-        ${deliveryHtml}
-        <h3>Оплата:</h3>
-        <p>${payments === "card" ? "Онлайн оплата" : "Накладений платіж"}</p>
-        <p>${notCall ? "Не телефонувати покупцю" : ""}</p>
-        <h3>Деталі замовлення:</h3>
-        ${productsHtml}
-        ${bundlesHtmls}
-        <h3>Загальна сума: ${totalPrice.toFixed(2)} грн</h3>
-      `,
-    };
-
-    await transport.sendMail(userOrderMessage);
-
-    await transport.sendMail(adminOrderMessage);
-
-    if (payments === "card") {
-      console.log("22. Начинаем monoPay");
-      const result = await monoPay({ amount: totalPrice * 100 });
-      console.log("23. monoPay вернул:", result);
-
-      await Order.findOneAndUpdate(
-        { orderId },
-        {
-          $set: {
-            paymentId: result.invoiceId,
-            paymentStatus: "unpaid",
-          },
-        }
-      );
-
-      res.status(201).json({
-        message: "Замовлення прийнято!",
-        orderId,
-        payments: {
-          invoiceId: result.invoiceId,
-          pageUrl: result.pageUrl,
-        },
-        status: "new",
-      });
-      return;
+      return res.status(409).json({ message: "Замовлення вже обробляється. Зачекайте кілька секунд." });
     }
-
-    res.status(201).json({
-      message: "Замовлення створено!",
-      orderId,
-      status: "Нове замовлення",
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+    throw error;
   }
+
+  if (payments === "card") {
+    try {
+      const invoice = await monoPay({ amount: Math.round(totalPrice * 100), orderId });
+      order.paymentId = invoice.invoiceId;
+      order.paymentUrl = invoice.pageUrl;
+      order.paymentStatus = "unpaid";
+      await order.save();
+    } catch (error) {
+      order.paymentStatus = "invoice_failed";
+      await order.save();
+      return res.status(502).json({
+        message: "Замовлення збережено, але сторінку оплати не вдалося створити. Зверніться до магазину.",
+        orderId,
+      });
+    }
+  }
+
+  const orderItems = [
+    ...products.map((item) => ({
+      title: item.product_name,
+      meta: `${item.amount} шт.${item.size ? ` · ${item.size}` : ""}`,
+      price: `${formatMoney((item.price / 100) * item.amount)} грн`,
+    })),
+    ...bundles.map((item) => ({
+      title: item.title,
+      meta: `Комплект · ${item.amount} шт.`,
+      price: `${formatMoney((item.newPrice / 100) * item.amount)} грн`,
+    })),
+  ];
+  const deliveryLabel = deliveryMethod === "self"
+    ? "Самовивіз із магазину"
+    : `${address.city} · ${address.deliveryType === "branch" ? `Відділення ${address.warehouse}` : address.deliveryType === "postbox" ? `Поштомат ${address.postbox}` : `${address.address}, буд. ${address.house}${address.apartment ? `, кв. ${address.apartment}` : ""}`}`;
+  const paymentLabel = payments === "card" ? "Онлайн-оплата" : "Оплата при отриманні";
+  const orderSummary = `${emailItems(orderItems)}${emailDetails([
+    ["Доставка", deliveryLabel],
+    ["Оплата", paymentLabel],
+    ["Разом", `${formatMoney(totalPrice)} грн`],
+  ])}`;
+  const customerMailHtml = emailLayout({
+    eyebrow: "ЗАМОВЛЕННЯ ПРИЙНЯТО",
+    title: `Замовлення ${orderId} оформлено`,
+    intro: `${firstName}, дякуємо за замовлення! Ми отримали його та незабаром почнемо обробку.`,
+    content: orderSummary,
+  });
+  const adminMailHtml = emailLayout({
+    eyebrow: "НОВЕ ЗАМОВЛЕННЯ",
+    title: `Нове замовлення ${orderId}`,
+    intro: "На сайті оформлено нове замовлення.",
+    content: `${emailDetails([
+      ["Покупець", `${firstName} ${lastName}`],
+      ["Email", email],
+      ["Телефон", phone],
+      ["Не телефонувати", notCall ? "Так" : "Ні"],
+      ["Коментар", deliveryComments],
+    ])}${orderSummary}`,
+  });
+  const adminEmail = process.env.ADMIN_ORDER_EMAIL || "kolyanerushaev@gmail.com";
+
+  const notificationResults = await Promise.allSettled([
+    transport.sendMail({ from: mailFrom, to: email, subject: `Замовлення ${orderId} прийнято`, html: customerMailHtml }),
+    transport.sendMail({ from: mailFrom, to: adminEmail, subject: `Нове замовлення ${orderId}`, html: adminMailHtml }),
+  ]);
+  if (notificationResults.some(({ status }) => status === "rejected")) {
+    console.error(`Order ${orderId}: one or more notification emails failed`);
+  }
+
+  return res.status(201).json(publicOrderResponse(order));
 };
 
 module.exports = addOrder;

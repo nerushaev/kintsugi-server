@@ -10,16 +10,6 @@ const allowedOrigins = [
   "https://www.kintsugi.org.ua",
   "http://localhost:3000"
 ];
-// const origin = "http://localhost:3000";
-// const origin = "http://www.kintsugi.org.ua";
-// const origin = "https://hanging-mustang-massage-democracy.trycloudflare.com"
-
-// const origin =
-//   process.env.NODE_ENV === "development"
-//     ? "http://localhost:3000"
-//     : "https://www.kintsugi.org.ua";
-// console.log(origin);
-
 const productsRouter = require("./routes/product");
 const authRouter = require("./routes/auth");
 const orderRouter = require("./routes/order");
@@ -28,6 +18,7 @@ const posterRouter = require("./routes/poster");
 const metaRouter = require("./routes/meta");
 const bundleRouter = require("./routes/bundle");
 const tagsRouter = require("./routes/tags");
+const deliveryRouter = require("./routes/delivery");
 
 const app = express();
 
@@ -47,7 +38,11 @@ app.set("trust proxy", 1);
 
 app.use(logger(formatsLogger));
 app.use(bodyParser.urlencoded({ extended: true }));
-app.use(express.json());
+app.use(express.json({
+  verify: (req, _res, buffer) => {
+    req.rawBody = Buffer.from(buffer);
+  },
+}));
 // app.use(express.static("public"));
 app.use(cookieParser());
 
@@ -59,6 +54,7 @@ app.use("/api/poster/", posterRouter);
 app.use("/api/meta/", metaRouter);
 app.use("/api/bundle/", bundleRouter);
 app.use("/api/tags/", tagsRouter);
+app.use("/api/delivery/", deliveryRouter);
 
 app.use((req, res) => {
   res.status(404).json({ message: "Not found" });

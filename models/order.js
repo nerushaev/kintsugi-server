@@ -2,6 +2,12 @@ const { Schema, model } = require("mongoose");
 
 const orderSchema = new Schema(
   {
+    clientRequestId: {
+      type: String,
+      unique: true,
+      sparse: true,
+      index: true,
+    },
     firstName: {
       type: String,
       required: [true, "Set name"],
@@ -44,6 +50,11 @@ const orderSchema = new Schema(
       apartment: {
         type: String,
       },
+      cityRef: { type: String },
+      settlementRef: { type: String },
+      warehouseRef: { type: String },
+      warehouseIndex: { type: String },
+      streetRef: { type: String },
       _id: {
         type: String,
       },
@@ -87,9 +98,19 @@ const orderSchema = new Schema(
     },
     paymentId: {
       type: String,
+      index: true,
     },
     paymentStatus: {
       type: String,
+    },
+    paymentUrl: {
+      type: String,
+    },
+    customerPaymentNotifiedAt: {
+      type: Date,
+    },
+    adminPaymentNotifiedAt: {
+      type: Date,
     },
     orderComments: {
       type: String,

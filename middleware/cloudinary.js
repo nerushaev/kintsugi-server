@@ -11,10 +11,7 @@ const options = {
 };
 
 exports.uploads = async (file, folder) => {
-  try {
-    const result = await cloudinary.uploader.upload(file, options);
-    return result.url;
-  } catch (error) {
-    console.log(error);
-  }
+  const result = await cloudinary.uploader.upload(file, options);
+
+  return result.secure_url || result.url.replace(/^http:/, "https:");
 };

@@ -1,15 +1,21 @@
-const Product = require('../../models/product');
+const Product = require("../../models/product");
+const { WEBSITE_PRODUCT_FILTER } = require("../../helpers/productVisibility");
 
 const getProductById = async (req, res) => {
-  console.log('here')
-  const productsId = req.params;
-  const result = productsId._id.split(",");
+  const productIds = String(req.params._id || "")
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
+  const products = await Product.find({
+    ...WEBSITE_PRODUCT_FILTER,
+    product_id: { $in: productIds },
+  }).lean();
 
-  const product = await Product.find({product_id: result});
-  if (!product) {
-    throw NotFound(`Contact with id=${elements} not found...`);
+  if (!products.length) {
+    return res.status(404).json({ message: "Товар не знайдено" });
   }
-  res.json(product.length === 1 ? product[0] : product);
+
+  res.json(products.length === 1 ? products[0] : products);
 };
 
 module.exports = getProductById;

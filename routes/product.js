@@ -1,61 +1,83 @@
 const express = require("express");
 const router = express.Router();
-const { ctrlWrapper, validation, upload, authenticate } = require("../middleware");
-const { productSchema } = require("../schemas");
-
-const validateMiddleware = validation(productSchema);
-
+const {
+  ctrlWrapper,
+  upload,
+  authenticate,
+  authorizeAdmin,
+} = require("../middleware");
 const productCtrl = require("../controllers/products");
+
+const useAdminProductScope = (req, _res, next) => {
+  req.adminScope = true;
+  next();
+};
 
 router.get("/favorite", ctrlWrapper(productCtrl.getFavoriteProduct));
 
-router.get("/search", ctrlWrapper(productCtrl.getProductsByName));
-
 router.get("/wish", authenticate, ctrlWrapper(productCtrl.getWishListProduct));
 
-router.get("/", productCtrl.getProducts);
+router.get("/", ctrlWrapper(productCtrl.getProducts));
 router.get("/all", ctrlWrapper(productCtrl.getAllProducts));
-
-
-router.get("/:category", productCtrl.getProducts);
-
-
+router.get(
+  "/admin",
+  authenticate,
+  authorizeAdmin,
+  useAdminProductScope,
+  ctrlWrapper(productCtrl.getProducts)
+);
 router.get("/getNames", ctrlWrapper(productCtrl.getAllProductsName));
-
 router.get("/comingSoon", ctrlWrapper(productCtrl.getComingSoonProducts));
-
 router.post("/availability", ctrlWrapper(productCtrl.checkAvailability));
-
 router.get("/id/:_id", ctrlWrapper(productCtrl.getProductById));
 
-
-router.delete("/:productId", ctrlWrapper(productCtrl.removeProductById));
+router.delete(
+  "/:productId",
+  authenticate,
+  authorizeAdmin,
+  ctrlWrapper(productCtrl.removeProductById)
+);
 
 router.patch(
   "/update/:product_id",
+  authenticate,
+  authorizeAdmin,
   ctrlWrapper(productCtrl.updateDescription)
 );
 
-
-router.post(
-  "/",
-  upload.array("image"),
-  // validateMiddleware,
-  ctrlWrapper(productCtrl.addProduct)
+router.patch(
+  "/admin/:product_id/visibility",
+  authenticate,
+  authorizeAdmin,
+  ctrlWrapper(productCtrl.updateWebsiteVisibility)
 );
 
 router.put(
   "/photos/:product_id",
+  authenticate,
+  authorizeAdmin,
   upload.array("photo_extra"),
   ctrlWrapper(productCtrl.updatePhotoProductById)
 );
 
+router.patch(
+  "/photos/:product_id/order",
+  authenticate,
+  authorizeAdmin,
+  ctrlWrapper(productCtrl.reorderProductPhotos)
+);
 
-
-router.patch("/banners", ctrlWrapper(productCtrl.changeBanners));
+router.patch(
+  "/banners",
+  authenticate,
+  authorizeAdmin,
+  ctrlWrapper(productCtrl.changeBanners)
+);
 
 router.post("/monobankWebhook", ctrlWrapper(productCtrl.monobankWebhook));
 
-router.patch("/favoriteUpdate", authenticate, ctrlWrapper(productCtrl.toggleProductToFavorite))
+router.patch("/favoriteUpdate", authenticate, ctrlWrapper(productCtrl.toggleProductToFavorite));
+
+router.get("/:category", ctrlWrapper(productCtrl.getProducts));
 
 module.exports = router;

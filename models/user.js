@@ -1,5 +1,10 @@
 const { Schema, model } = require("mongoose");
 const Joi = require("joi");
+const {
+  PERSON_NAME_PATTERN,
+  normalizeUkrainianPhone,
+  isUkrainianPhone,
+} = require("../helpers/customerValidation");
 
 const addressSchema = new Schema({
   deliveryType: {
@@ -23,6 +28,11 @@ const addressSchema = new Schema({
   apartment: {
     type: String,
   },
+  cityRef: { type: String },
+  settlementRef: { type: String },
+  warehouseRef: { type: String },
+  warehouseIndex: { type: String },
+  streetRef: { type: String },
 });
 
 const userSchema = new Schema(
@@ -49,9 +59,15 @@ const userSchema = new Schema(
       type: String,
       required: true,
       minLength: 6,
+      select: false,
     },
     verificationToken: {
       type: String,
+    },
+    refreshToken: {
+      type: String,
+      default: "",
+      select: false,
     },
     role: {
       type: String,
@@ -74,22 +90,47 @@ const userSchema = new Schema(
   { versionKey: false, timestampts: true }
 );
 
+const nameSchema = Joi.string().trim().min(2).max(80).pattern(PERSON_NAME_PATTERN).required();
+const phoneSchema = Joi.string().trim().custom((value, helpers) => {
+  const normalized = normalizeUkrainianPhone(value);
+  return isUkrainianPhone(normalized) ? normalized : helpers.error("string.pattern.base");
+}, "Ukrainian phone normalization");
+
 const registerSchema = Joi.object({
-  firstName: Joi.string().required(),
-  lastName: Joi.string().required(),
-  email: Joi.string().required(),
-  password: Joi.string().min(6).required(),
-  phone: Joi.string().required(),
+  firstName: nameSchema,
+  lastName: nameSchema,
+  email: Joi.string().trim().lowercase().email().max(150).required(),
+  password: Joi.string().min(7).max(72).required(),
+  phone: phoneSchema.required(),
 });
 
 const loginSchema = Joi.object({
-  email: Joi.string().required(),
-  password: Joi.string().min(6).required(),
+  email: Joi.string().trim().lowercase().email().max(150).required(),
+  password: Joi.string().max(72).required(),
+});
+
+const updateUserSchema = Joi.object({
+  firstName: nameSchema,
+  lastName: nameSchema,
+  email: Joi.string().trim().lowercase().email().max(150).required(),
+  phone: phoneSchema.required(),
+});
+
+const emailSchema = Joi.object({
+  email: Joi.string().trim().lowercase().email().max(150).required(),
+});
+
+const changePasswordSchema = Joi.object({
+  oldPass: Joi.string().max(72).required(),
+  newPass: Joi.string().min(7).max(72).required(),
 });
 
 const schemas = {
   registerSchema,
   loginSchema,
+  updateUserSchema,
+  emailSchema,
+  changePasswordSchema,
 };
 
 const User = model("user", userSchema);

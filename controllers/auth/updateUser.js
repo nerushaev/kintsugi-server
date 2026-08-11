@@ -29,7 +29,7 @@ const updateUser = async (req, res) => {
     }
 
     const updatedUser = await User.findOneAndUpdate(
-      _id,
+      { _id },
       {
         firstName,
         lastName,
@@ -38,6 +38,7 @@ const updateUser = async (req, res) => {
       },
       {
         new: true,
+        runValidators: true,
       }
     );
 

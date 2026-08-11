@@ -1,21 +1,23 @@
-const Order = require('../../models/order');
+const Order = require("../../models/order");
 
 const getOrder = async (req, res) => {
+  const requestedIds = Array.isArray(req.body)
+    ? req.body
+    : Array.isArray(req.body?.orderIds)
+      ? req.body.orderIds
+      : [];
 
-  console.log(req.body);
+  const ownedOrderIds = new Set((req.user.orders || []).map(String));
+  const allowedIds =
+    req.user.role === "admin"
+      ? requestedIds
+      : requestedIds.filter((orderId) => ownedOrderIds.has(String(orderId)));
 
-  if(req.body.length === 1) {
-    console.log('here1');
-    const order = await Order.find({ orderId: req.body[0] });
-    res.json({order});
-  } else {
-    console.log('here2');
-      const data = await Order.find({orderId: req.body});
-      console.log(data);
-      res.json({order: data});
-  }
-  
-  // res.json({order});
-}
+  const orders = await Order.find({ orderId: { $in: allowedIds } }).sort({
+    createdAt: -1,
+  });
+
+  return res.json({ order: orders });
+};
 
 module.exports = getOrder;

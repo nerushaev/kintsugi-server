@@ -1,6 +1,7 @@
 const jwt = require("jsonwebtoken");
 const { generateTokens, RequestError } = require("../../helpers");
 const { User } = require("../../models/user");
+const { getAuthCookieOptions } = require("../../helpers/authCookies");
 
 const { REFRESH_SECRET_KEY } = process.env;
 
@@ -11,42 +12,38 @@ const refresh = async (req, res) => {
     throw RequestError(401, "Not authorized");
   }
 
-  const { id } = jwt.verify(refreshToken, REFRESH_SECRET_KEY);
-  const data = await User.findOne({ _id: id, refreshToken });
-
-  if (!data) {
-    return next(createHttpError(401));
+  let id;
+  try {
+    ({ id } = jwt.verify(refreshToken, REFRESH_SECRET_KEY));
+  } catch {
+    throw RequestError(401, "Not authorized");
   }
 
-  const tokens = await generateTokens(data._id);
+  const currentUser = await User.findOne({ _id: id, refreshToken });
 
-  const user = await User.findByIdAndUpdate(data._id, {
-    token: tokens.token,
-    refreshToken: tokens.refreshToken,
-  });
+  if (!currentUser) {
+    throw RequestError(401, "Not authorized");
+  }
 
-res.cookie("refreshToken", tokens.refreshToken, {
-  sameSite: "None",
-  httpOnly: true,
-  secure: true,
-  domain: ".kintsugi.org.ua",
-  maxAge: 30 * 24 * 60 * 60 * 1000,
-});
+  const tokens = await generateTokens(currentUser._id);
+  const user = await User.findByIdAndUpdate(
+    currentUser._id,
+    { refreshToken: tokens.refreshToken },
+    { new: true }
+  );
 
-res.cookie("token", tokens.token, {
-  sameSite: "None",
-  httpOnly: true,
-  secure: true,
-  domain: ".kintsugi.org.ua",
-  maxAge: 15 * 60 * 1000, // например, 15 минут для access token
-});
-
-  
-
-  res.json({
-    token: tokens.token,
-    user: user,
-  });
+  res
+    .cookie(
+      "refreshToken",
+      tokens.refreshToken,
+      getAuthCookieOptions(req, 30 * 24 * 60 * 60 * 1000)
+    )
+    .cookie(
+      "token",
+      tokens.token,
+      getAuthCookieOptions(req, 12 * 60 * 60 * 1000)
+    )
+    .json({ token: tokens.token, user });
 };
 
 module.exports = refresh;

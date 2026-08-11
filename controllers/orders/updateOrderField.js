@@ -4,7 +4,6 @@ const updateOrderField = async (req, res) => {
   try {
     const { key, value } = req.body;
     const { orderId } = req.params;
-    console.log(orderId)
     if (!orderId || !key) {
       return res.status(400).json({ message: "Поле id и key обязательны" });
     }

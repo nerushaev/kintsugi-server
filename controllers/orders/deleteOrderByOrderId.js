@@ -9,6 +9,13 @@ const deleteOrderByOrderId = async (req, res) => {
       return res.status(400).json({ message: "orderId обов'язковий" });
     }
 
+    const ownsOrder = (req.user.orders || []).some(
+      (userOrderId) => String(userOrderId) === String(orderId)
+    );
+    if (req.user.role !== "admin" && !ownsOrder) {
+      return res.status(403).json({ message: "Недостатньо прав для видалення замовлення" });
+    }
+
     const deletedOrder = await Order.findOneAndDelete({ orderId });
 
     if (!deletedOrder) {
@@ -16,8 +23,10 @@ const deleteOrderByOrderId = async (req, res) => {
     }
 
     // Удаляем orderId из массива заказов пользователя
+    const ownerFilter =
+      req.user.role === "admin" ? { orders: orderId } : { _id: req.user._id };
     await User.updateOne(
-      { orders: orderId },          // Найти пользователя с этим заказом
+      ownerFilter,
       { $pull: { orders: orderId } } // Удалить заказ из массива
     );
 
