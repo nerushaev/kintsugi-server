@@ -1,7 +1,8 @@
 const express = require("express");
 const logger = require("morgan");
 const bodyParser = require("body-parser");
-require("dotenv").config();
+const path = require("path");
+require("dotenv").config({ path: path.join(__dirname, ".env") });
 const cookieParser = require("cookie-parser");
 const cors = require("cors");
 
