@@ -29,6 +29,8 @@ const updateCharacteristics = async (req, res) => {
     return res.status(400).json({ message: "Немає характеристик для збереження" });
   }
 
+  updates.characteristicsReviewStatus = "verified";
+
   const product = await Product.findOneAndUpdate(
     { product_id: req.params.product_id },
     { $set: updates },

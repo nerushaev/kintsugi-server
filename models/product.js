@@ -62,6 +62,10 @@ const productSchema = new Schema({
     type: String,
     trim: true,
   },
+  characteristicsReviewStatus: {
+    type: String,
+    enum: ["auto", "verified"],
+  },
   photo_extra: {
     type: Array,
   },

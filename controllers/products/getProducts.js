@@ -59,6 +59,7 @@ const getProducts = async (req, res) => {
   const price = req.query.price;
   const contentIssue = req.query.contentIssue;
   const sortByContentIssues = req.query.sortByContentIssues === "true";
+  const characteristicsReview = req.query.characteristicsReview;
   const { category } = req.params;
 
   const match = req.adminScope
@@ -74,6 +75,10 @@ const getProducts = async (req, res) => {
     match.category_name = isWebsiteCategory(category)
       ? category
       : { $in: [] };
+  }
+
+  if (req.adminScope && characteristicsReview === "auto") {
+    match.characteristicsReviewStatus = "auto";
   }
 
   if (contentIssue === "missingPhoto") {
