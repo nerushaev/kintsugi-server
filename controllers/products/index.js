@@ -16,6 +16,7 @@ const updateWebsiteVisibility = require("./updateWebsiteVisibility");
 const reorderProductPhotos = require("./reorderProductPhotos");
 const updateCharacteristics = require("./updateCharacteristics");
 const verifyCharacteristics = require("./verifyCharacteristics");
+const updatePopularStatus = require("./updatePopularStatus");
 
 module.exports = {
   getProducts,
@@ -36,4 +37,5 @@ module.exports = {
   reorderProductPhotos,
   updateCharacteristics,
   verifyCharacteristics,
+  updatePopularStatus,
 };

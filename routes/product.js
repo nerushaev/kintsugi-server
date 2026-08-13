@@ -53,6 +53,13 @@ router.patch(
 );
 
 router.patch(
+  "/admin/:product_id/popular",
+  authenticate,
+  authorizeAdmin,
+  ctrlWrapper(productCtrl.updatePopularStatus)
+);
+
+router.patch(
   "/admin/:product_id/characteristics",
   authenticate,
   authorizeAdmin,
