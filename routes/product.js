@@ -59,6 +59,13 @@ router.patch(
   ctrlWrapper(productCtrl.updateCharacteristics)
 );
 
+router.patch(
+  "/admin/:product_id/characteristics/verify",
+  authenticate,
+  authorizeAdmin,
+  ctrlWrapper(productCtrl.verifyCharacteristics)
+);
+
 router.put(
   "/photos/:product_id",
   authenticate,
