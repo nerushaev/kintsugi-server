@@ -63,7 +63,13 @@ app.use((req, res) => {
 
 app.use((err, req, res, next) => {
   const { status = 500, message = "Server error" } = err;
-  res.status(status).json({ message });
+  if (status >= 500) {
+    console.error(`${req.method} ${req.originalUrl}:`, err);
+  }
+  res.status(status).json({
+    message,
+    ...(status === 401 && { canRefresh: err.canRefresh === true }),
+  });
 });
 
 module.exports = app;
