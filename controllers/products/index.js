@@ -14,6 +14,7 @@ const getFavoriteProduct = require("./getFavoriteProduct");
 const checkAvailability = require("./checkAvailability");
 const updateWebsiteVisibility = require("./updateWebsiteVisibility");
 const reorderProductPhotos = require("./reorderProductPhotos");
+const updateCharacteristics = require("./updateCharacteristics");
 
 module.exports = {
   getProducts,
@@ -32,4 +33,5 @@ module.exports = {
   checkAvailability,
   updateWebsiteVisibility,
   reorderProductPhotos,
+  updateCharacteristics,
 };

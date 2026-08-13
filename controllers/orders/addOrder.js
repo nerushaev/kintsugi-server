@@ -25,6 +25,7 @@ const {
 const PAYMENT_METHODS = new Set(["cash", "card"]);
 const DELIVERY_METHODS = new Set(["nova", "self"]);
 const NOVA_DELIVERY_TYPES = new Set(["branch", "postbox", "address"]);
+const MIN_ORDER_PRICE = 300;
 
 const cleanText = (value, maxLength = 300) =>
   typeof value === "string" ? value.trim().slice(0, maxLength) : "";
@@ -203,6 +204,52 @@ const buildBundles = async (requestedBundles) => {
   });
 };
 
+const validateCombinedAvailability = async (products, bundles) => {
+  const requirements = new Map();
+  const addRequirement = (productId, size, amount) => {
+    const normalizedSize = cleanText(size, 80);
+    const key = `${productId}:${normalizedSize}`;
+    requirements.set(key, {
+      productId,
+      size: normalizedSize,
+      amount: (requirements.get(key)?.amount || 0) + amount,
+    });
+  };
+
+  products.forEach((product) =>
+    addRequirement(product.product_id, product.size, product.amount)
+  );
+  bundles.forEach((bundle) => {
+    bundle.products.forEach((product) =>
+      addRequirement(product.product_id, product.size, bundle.amount)
+    );
+  });
+
+  const requested = [...requirements.values()];
+  const storedProducts = await Product.find({
+    ...WEBSITE_PRODUCT_FILTER,
+    product_id: { $in: [...new Set(requested.map((item) => item.productId))] },
+  })
+    .select("product_id amount modifications")
+    .lean();
+  const byId = new Map(storedProducts.map((product) => [product.product_id, product]));
+
+  for (const item of requested) {
+    const product = byId.get(item.productId);
+    if (!product) throw new Error("PRODUCT_UNAVAILABLE");
+
+    const available = item.size
+      ? Number(
+          product.modifications?.find(
+            (modification) => modification.modificator_name === item.size
+          )?.size_left
+        ) || 0
+      : Number(product.amount) || 0;
+
+    if (available < item.amount) throw new Error("PRODUCT_UNAVAILABLE");
+  }
+};
+
 const publicOrderResponse = (order) => ({
   message: "Замовлення прийнято!",
   orderId: order.orderId,
@@ -279,6 +326,7 @@ const addOrder = async (req, res) => {
       buildProducts(req.body.products),
       buildBundles(req.body.bundles),
     ]);
+    await validateCombinedAvailability(products, bundles);
   } catch (error) {
     if (error.message === "INCOMPLETE_DELIVERY_ADDRESS") {
       return res.status(400).json({ message: "Заповніть адресу доставки" });
@@ -298,6 +346,11 @@ const addOrder = async (req, res) => {
     bundles.reduce((sum, item) => sum + (item.newPrice / 100) * item.amount, 0);
   if (!Number.isFinite(totalPrice) || totalPrice <= 0) {
     return res.status(400).json({ message: "Не вдалося розрахувати суму замовлення" });
+  }
+  if (totalPrice < MIN_ORDER_PRICE) {
+    return res.status(400).json({
+      message: `Мінімальна сума замовлення — ${MIN_ORDER_PRICE} грн`,
+    });
   }
 
   const orderId = new RandExp(/^[A-Z]{2}\d{10}$/).gen();

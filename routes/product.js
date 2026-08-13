@@ -52,6 +52,13 @@ router.patch(
   ctrlWrapper(productCtrl.updateWebsiteVisibility)
 );
 
+router.patch(
+  "/admin/:product_id/characteristics",
+  authenticate,
+  authorizeAdmin,
+  ctrlWrapper(productCtrl.updateCharacteristics)
+);
+
 router.put(
   "/photos/:product_id",
   authenticate,

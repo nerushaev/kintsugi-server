@@ -7,6 +7,7 @@ const updateOrderField = require('./updateOrderField');
 const deleteOrderByOrderId = require('./deleteOrderByOrderId');
 const getTrackingStatus = require('./getTrackingStatus');
 const retryPayment = require('./retryPayment');
+const syncPaymentStatus = require('./syncPaymentStatus');
 
 module.exports = {
   getAllOrders,
@@ -17,5 +18,6 @@ module.exports = {
   updateOrderField,
   deleteOrderByOrderId,
   getTrackingStatus,
-  retryPayment
+  retryPayment,
+  syncPaymentStatus
 }

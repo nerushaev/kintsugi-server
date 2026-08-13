@@ -1,37 +1,42 @@
 const Order = require("../../models/order");
 
-const getAllOrders = async (req, res) => {
-  const { page = 1, limit = 10, search = "" } = req.query;
+const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-  const searchRegex = new RegExp(search, "i");
+const getAllOrders = async (req, res) => {
+  const requestedPage = Number(req.query.page);
+  const requestedLimit = Number(req.query.limit);
+  const page = Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
+  const limit = Number.isInteger(requestedLimit) && requestedLimit > 0
+    ? Math.min(requestedLimit, 50)
+    : 10;
+  const search = typeof req.query.search === "string" ? req.query.search.trim().slice(0, 100) : "";
 
   const filter = search
     ? {
         $or: [
-          { orderId: searchRegex },
-          { "user.firstName": searchRegex },
-          { "user.lastName": searchRegex },
-          { "user.email": searchRegex },
-          { "delivery.city": searchRegex },
-          { "delivery.address": searchRegex },
-          { status: searchRegex },
+          { orderId: new RegExp(escapeRegExp(search), "i") },
+          { firstName: new RegExp(escapeRegExp(search), "i") },
+          { lastName: new RegExp(escapeRegExp(search), "i") },
+          { email: new RegExp(escapeRegExp(search), "i") },
+          { phone: new RegExp(escapeRegExp(search), "i") },
+          { "address.city": new RegExp(escapeRegExp(search), "i") },
+          { "address.address": new RegExp(escapeRegExp(search), "i") },
+          { status: new RegExp(escapeRegExp(search), "i") },
+          { TTN: new RegExp(escapeRegExp(search), "i") },
         ],
       }
     : {};
 
-  const skip = (page - 1) * limit;
+  const [orders, total] = await Promise.all([
+    Order.find(filter).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean(),
+    Order.countDocuments(filter),
+  ]);
 
-  const orders = await Order.find(filter)
-    .sort({ createdAt: -1 })
-    .skip(skip)
-    .limit(Number(limit));
-
-  const total = await Order.countDocuments(filter);
-
-  res.json({
+  return res.json({
     orders,
-    currentPage: Number(page),
-    totalPages: Math.ceil(total / limit),
+    currentPage: page,
+    totalPages: Math.max(1, Math.ceil(total / limit)),
+    totalItems: total,
   });
 };
 

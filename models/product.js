@@ -42,6 +42,26 @@ const productSchema = new Schema({
   description: {
     type: String,
   },
+  material: {
+    type: String,
+    trim: true,
+  },
+  color: {
+    type: String,
+    trim: true,
+  },
+  equipment: {
+    type: String,
+    trim: true,
+  },
+  character: {
+    type: String,
+    trim: true,
+  },
+  fandom: {
+    type: String,
+    trim: true,
+  },
   photo_extra: {
     type: Array,
   },

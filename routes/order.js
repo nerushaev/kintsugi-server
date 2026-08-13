@@ -8,6 +8,7 @@ router.post("/getOrders", authenticate, ctrlWrapper(orderCtrl.getOrdersByIds));
 router.post("/get", authenticate, ctrlWrapper(orderCtrl.getOrder));
 router.get("/:orderId/tracking", authenticate, ctrlWrapper(orderCtrl.getTrackingStatus));
 router.post("/:orderId/payment", authenticate, ctrlWrapper(orderCtrl.retryPayment));
+router.post("/:orderId/payment/status", authenticate, authorizeAdmin, ctrlWrapper(orderCtrl.syncPaymentStatus));
 router.post("/", ctrlWrapper(orderCtrl.addOrder));
 router.post("/createWaybill", authenticate, authorizeAdmin, ctrlWrapper(orderCtrl.createWaybill));
 router.patch('/:orderId/update', authenticate, authorizeAdmin, ctrlWrapper(orderCtrl.updateOrderField));

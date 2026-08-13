@@ -143,3 +143,4 @@ const monobankWebhook = async (req, res) => {
 };
 
 module.exports = monobankWebhook;
+module.exports.sendPaymentNotifications = sendPaymentNotifications;
