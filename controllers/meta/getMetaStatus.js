@@ -1,5 +1,8 @@
 const Product = require("../../models/product");
-const { WEBSITE_PRODUCT_FILTER } = require("../../helpers/productVisibility");
+const {
+  ACTIVE_INVENTORY_FILTER,
+  WEBSITE_PRODUCT_FILTER,
+} = require("../../helpers/productVisibility");
 
 const hasImage = (product) =>
   Boolean(
@@ -12,10 +15,17 @@ const hasDescription = (product) =>
   typeof product.description === "string" && product.description.trim().length > 0;
 
 const getMetaStatus = async (_req, res) => {
-  const products = await Product.find(
-    WEBSITE_PRODUCT_FILTER,
-    "product_id photo photo_origin photo_extra description"
-  ).lean();
+  const [products, hiddenProductsCount, autoReviewCount] = await Promise.all([
+    Product.find(
+      WEBSITE_PRODUCT_FILTER,
+      "product_id photo photo_origin photo_extra description"
+    ).lean(),
+    Product.countDocuments({ ...ACTIVE_INVENTORY_FILTER, websiteHidden: true }),
+    Product.countDocuments({
+      ...ACTIVE_INVENTORY_FILTER,
+      characteristicsReviewStatus: "auto",
+    }),
+  ]);
   const productIds = [...new Set(products.map(({ product_id }) => product_id))];
   const productsWithoutPhotoIds = [];
   const productsWithoutDescriptionIds = [];
@@ -42,6 +52,8 @@ const getMetaStatus = async (_req, res) => {
     productsWithoutDescriptionCount: new Set(productsWithoutDescriptionIds).size,
     productsWithoutPhotoIds: [...new Set(productsWithoutPhotoIds)],
     productsWithoutDescriptionIds: [...new Set(productsWithoutDescriptionIds)],
+    hiddenProductsCount,
+    autoReviewCount,
   });
 };
 

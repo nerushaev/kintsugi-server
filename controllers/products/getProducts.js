@@ -8,6 +8,38 @@ const {
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
 
+const MISSING_PHOTO_FILTER = {
+  $and: [
+    { $or: [{ photo: { $exists: false } }, { photo: null }, { photo: "" }] },
+    {
+      $or: [
+        { photo_origin: { $exists: false } },
+        { photo_origin: null },
+        { photo_origin: "" },
+      ],
+    },
+    {
+      $or: [
+        { photo_extra: { $exists: false } },
+        { photo_extra: null },
+        { photo_extra: { $size: 0 } },
+      ],
+    },
+  ],
+};
+
+const MISSING_DESCRIPTION_FILTER = {
+  $or: [
+    { description: { $exists: false } },
+    { description: null },
+    { description: { $not: /\S/ } },
+  ],
+};
+
+const appendFilter = (match, filter) => {
+  match.$and = [...(match.$and || []), filter];
+};
+
 const parsePositiveInteger = (value, fallback) => {
   const parsed = Number.parseInt(value, 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
@@ -57,7 +89,7 @@ const getProducts = async (req, res) => {
   const skip = (page - 1) * limit;
   const search = String(req.query.search || "").trim();
   const price = req.query.price;
-  const contentIssue = req.query.contentIssue;
+  const contentStatus = req.query.contentStatus || req.query.contentIssue;
   const sortByContentIssues = req.query.sortByContentIssues === "true";
   const characteristicsReview = req.query.characteristicsReview;
   const { category } = req.params;
@@ -81,30 +113,38 @@ const getProducts = async (req, res) => {
     match.characteristicsReviewStatus = "auto";
   }
 
-  if (contentIssue === "missingPhoto") {
-    match.$and = [
-      {
-        $or: [
-          { photo: { $exists: false } },
-          { photo: null },
-          { photo: "" },
+  if (req.adminScope) {
+    if (contentStatus === "attention") {
+      appendFilter(match, {
+        $and: [
+          { websiteHidden: { $ne: true } },
+          { $or: [MISSING_PHOTO_FILTER, MISSING_DESCRIPTION_FILTER] },
         ],
-      },
-      {
-        $or: [
-          { photo_origin: { $exists: false } },
-          { photo_origin: null },
-          { photo_origin: "" },
+      });
+    } else if (contentStatus === "missingPhoto") {
+      appendFilter(match, {
+        $and: [
+          { websiteHidden: { $ne: true } },
+          MISSING_PHOTO_FILTER,
         ],
-      },
-      {
-        $or: [
-          { photo_extra: { $exists: false } },
-          { photo_extra: null },
-          { photo_extra: { $size: 0 } },
+      });
+    } else if (contentStatus === "missingDescription") {
+      appendFilter(match, {
+        $and: [
+          { websiteHidden: { $ne: true } },
+          MISSING_DESCRIPTION_FILTER,
         ],
-      },
-    ];
+      });
+    } else if (contentStatus === "ready") {
+      appendFilter(match, {
+        $and: [
+          { websiteHidden: { $ne: true } },
+          { $nor: [MISSING_PHOTO_FILTER, MISSING_DESCRIPTION_FILTER] },
+        ],
+      });
+    } else if (contentStatus === "hidden") {
+      appendFilter(match, { websiteHidden: true });
+    }
   }
 
   const priceSort = price === "low" ? 1 : price === "high" ? -1 : null;
