@@ -36,9 +36,10 @@ const getTrackingStatus = async (req, res) => {
     NOVA_BASE_URL || "https://api.novaposhta.ua/v2.0/json/",
     {
       apiKey: NOVA_API_KEY,
-      modelName: "TrackingDocumentGeneral",
+      modelName: "TrackingDocument",
       calledMethod: "getStatusDocuments",
       methodProperties: {
+        Language: "UA",
         Documents: [
           {
             DocumentNumber: String(order.TTN),
