@@ -1,6 +1,8 @@
 const axios = require("axios");
 const Order = require("../../models/order");
 
+const NOVA_TRACKING_URL = "https://api.novaposhta.ua/v2.0/json/";
+
 const toNovaPhone = (value) => {
   const digits = String(value || "").replace(/\D/g, "");
   if (digits.length === 10 && digits.startsWith("0")) return `38${digits}`;
@@ -27,28 +29,45 @@ const getTrackingStatus = async (req, res) => {
     return res.json({ status: "" });
   }
 
-  const { NOVA_API_KEY, NOVA_BASE_URL } = process.env;
+  const { NOVA_API_KEY } = process.env;
   if (!NOVA_API_KEY) {
     return res.status(503).json({ message: "Сервіс відстеження тимчасово недоступний" });
   }
 
-  const { data } = await axios.post(
-    NOVA_BASE_URL || "https://api.novaposhta.ua/v2.0/json/",
-    {
-      apiKey: NOVA_API_KEY,
-      modelName: "TrackingDocument",
-      calledMethod: "getStatusDocuments",
-      methodProperties: {
-        Language: "UA",
-        Documents: [
-          {
-            DocumentNumber: String(order.TTN),
-            Phone: toNovaPhone(order.phone),
-          },
-        ],
+  let data;
+  try {
+    const response = await axios.post(
+      NOVA_TRACKING_URL,
+      {
+        apiKey: NOVA_API_KEY,
+        modelName: "TrackingDocument",
+        calledMethod: "getStatusDocuments",
+        methodProperties: {
+          Language: "UA",
+          Documents: [
+            {
+              DocumentNumber: String(order.TTN),
+              Phone: toNovaPhone(order.phone),
+            },
+          ],
+        },
       },
-    }
-  );
+      { timeout: 15000 }
+    );
+    data = response.data;
+  } catch (error) {
+    const upstreamStatus = error.response?.status;
+    console.error("Nova Poshta tracking request failed", {
+      code: error.code,
+      upstreamStatus,
+    });
+
+    return res.status(502).json({
+      message: upstreamStatus
+        ? `Нова пошта відповіла з помилкою (${upstreamStatus})`
+        : "Сервер не зміг з'єднатися з Новою поштою",
+    });
+  }
 
   const tracking = data?.data?.[0];
   const hasTrackingData = Boolean(tracking?.Status || tracking?.StatusCode);
