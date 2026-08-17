@@ -50,7 +50,8 @@ const getTrackingStatus = async (req, res) => {
   );
 
   const tracking = data?.data?.[0];
-  if (data?.success === false || !tracking) {
+  const hasTrackingData = Boolean(tracking?.Status || tracking?.StatusCode);
+  if (!hasTrackingData) {
     const novaMessage = [...(data?.errors || []), ...(data?.warnings || [])]
       .filter(Boolean)
       .join("; ");
