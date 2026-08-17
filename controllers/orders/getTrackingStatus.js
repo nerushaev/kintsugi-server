@@ -1,6 +1,12 @@
 const axios = require("axios");
 const Order = require("../../models/order");
 
+const toNovaPhone = (value) => {
+  const digits = String(value || "").replace(/\D/g, "");
+  if (digits.length === 10 && digits.startsWith("0")) return `38${digits}`;
+  return digits;
+};
+
 const getTrackingStatus = async (req, res) => {
   const { orderId } = req.params;
   const ownsOrder = (req.user.orders || []).some(
@@ -34,7 +40,7 @@ const getTrackingStatus = async (req, res) => {
         Documents: [
           {
             DocumentNumber: String(order.TTN),
-            Phone: String(order.phone),
+            Phone: toNovaPhone(order.phone),
           },
         ],
       },
@@ -42,6 +48,16 @@ const getTrackingStatus = async (req, res) => {
   );
 
   const tracking = data?.data?.[0];
+  if (data?.success === false || !tracking) {
+    const novaMessage = [...(data?.errors || []), ...(data?.warnings || [])]
+      .filter(Boolean)
+      .join("; ");
+
+    return res.status(502).json({
+      message: novaMessage || "Нова пошта не повернула дані для цієї ТТН",
+    });
+  }
+
   return res.json({
     status: tracking?.Status || "",
     statusCode: tracking?.StatusCode || "",
