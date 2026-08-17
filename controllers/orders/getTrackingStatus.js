@@ -31,7 +31,11 @@ const getTrackingStatus = async (req, res) => {
 
   const { NOVA_API_KEY } = process.env;
   if (!NOVA_API_KEY) {
-    return res.status(503).json({ message: "Сервіс відстеження тимчасово недоступний" });
+    return res.json({
+      status: "Не налаштовано ключ API Нової пошти на сервері",
+      trackingAvailable: false,
+      diagnosticCode: "NOVA_KEY_MISSING",
+    });
   }
 
   let data;
@@ -62,10 +66,12 @@ const getTrackingStatus = async (req, res) => {
       upstreamStatus,
     });
 
-    return res.status(502).json({
-      message: upstreamStatus
+    return res.json({
+      status: upstreamStatus
         ? `Нова пошта відповіла з помилкою (${upstreamStatus})`
         : "Сервер не зміг з'єднатися з Новою поштою",
+      trackingAvailable: false,
+      diagnosticCode: upstreamStatus ? "NOVA_HTTP_ERROR" : "NOVA_CONNECTION_ERROR",
     });
   }
 
@@ -76,14 +82,17 @@ const getTrackingStatus = async (req, res) => {
       .filter(Boolean)
       .join("; ");
 
-    return res.status(502).json({
-      message: novaMessage || "Нова пошта не повернула дані для цієї ТТН",
+    return res.json({
+      status: novaMessage || "Нова пошта не повернула дані для цієї ТТН",
+      trackingAvailable: false,
+      diagnosticCode: "NOVA_RESPONSE_ERROR",
     });
   }
 
   return res.json({
     status: tracking?.Status || "",
     statusCode: tracking?.StatusCode || "",
+    trackingAvailable: true,
   });
 };
 
