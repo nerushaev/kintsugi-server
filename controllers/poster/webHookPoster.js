@@ -56,6 +56,28 @@ const firstPrice = (price) => {
   return Number(price[1]) || values[0] || 0;
 };
 
+const normalizeProductName = (value) =>
+  String(value || "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .toLocaleLowerCase("uk-UA");
+
+const findProductLeftover = (leftovers, posterProduct) => {
+  const productName = normalizeProductName(posterProduct.product_name);
+
+  // Poster product_id and storage ingredient_id are not guaranteed to be the
+  // same. Prefer the exact product name so an unrelated ingredient with a
+  // coincidentally matching id cannot zero out the product stock.
+  const byName = leftovers.find(
+    (item) => normalizeProductName(item.ingredient_name) === productName
+  );
+  if (byName) return byName;
+
+  return leftovers.find(
+    (item) => String(item.ingredient_id) === String(posterProduct.product_id)
+  );
+};
+
 const buildPosterProduct = async (posterProduct) => {
   const modifications = Array.isArray(posterProduct.modifications)
     ? posterProduct.modifications
@@ -101,11 +123,7 @@ const buildPosterProduct = async (posterProduct) => {
     type: 2,
     zero_leftovers: true,
   });
-  const leftover = leftovers.find(
-    (item) =>
-      String(item.ingredient_id) === String(posterProduct.product_id) ||
-      item.ingredient_name === posterProduct.product_name
-  );
+  const leftover = findProductLeftover(leftovers, posterProduct);
 
   return {
     product_name: posterProduct.product_name,
@@ -135,6 +153,73 @@ const syncPosterProduct = async (productId) => {
   );
 };
 
+const syncPosterProductStock = async (productId) => {
+  const posterProduct = await posterRequest("menu.getProduct", {
+    product_id: productId,
+  });
+  const stock = await buildPosterProduct(posterProduct);
+  const existingProduct = await Product.findOne({
+    product_id: String(productId),
+  });
+
+  if (!existingProduct) {
+    await Product.create(stock);
+    return;
+  }
+
+  const update = { amount: stock.amount };
+
+  if (stock.modifications.length > 0) {
+    const stockByIngredient = new Map(
+      stock.modifications.map((item) => [String(item.ingredient_id), item.size_left])
+    );
+    update.modifications = existingProduct.modifications.map((item) => ({
+      ...item.toObject(),
+      size_left:
+        stockByIngredient.get(String(item.ingredient_id)) ?? item.size_left,
+    }));
+  }
+
+  await Product.updateOne(
+    { product_id: String(productId) },
+    { $set: update }
+  );
+};
+
+const syncPosterStockElement = async (elementId) => {
+  const leftovers = await posterRequest("storage.getStorageLeftovers", {
+    type: 2,
+    zero_leftovers: true,
+  });
+  const leftover = leftovers.find(
+    (item) => String(item.ingredient_id) === String(elementId)
+  );
+
+  if (!leftover?.ingredient_name) return;
+
+  const localProduct = await Product.findOne({
+    product_name: leftover.ingredient_name,
+  }).select("product_id");
+
+  if (localProduct?.product_id) {
+    await syncPosterProductStock(localProduct.product_id);
+    return;
+  }
+
+  // A stock event can arrive before the product event. Locate the Poster
+  // product by its exact name and create it instead of silently dropping it.
+  const posterProducts = await posterRequest("menu.getProducts");
+  const posterProduct = posterProducts.find(
+    (item) =>
+      normalizeProductName(item.product_name) ===
+      normalizeProductName(leftover.ingredient_name)
+  );
+
+  if (posterProduct?.product_id) {
+    await syncPosterProduct(posterProduct.product_id);
+  }
+};
+
 const webHookPoster = async (req, res) => {
   if (!POSTER_WEBHOOK_SECRET) {
     return res.status(503).json({ message: "Poster webhook is not configured" });
@@ -162,12 +247,9 @@ const webHookPoster = async (req, res) => {
     }
 
     if (stockData.product_id) {
-      await syncPosterProduct(stockData.product_id);
+      await syncPosterProductStock(stockData.product_id);
     } else if (stockData.element_id) {
-      await Product.findOneAndUpdate(
-        { product_id: String(stockData.element_id) },
-        { $set: { amount: Math.max(0, Number(stockData.value_absolute) || 0) } }
-      );
+      await syncPosterStockElement(stockData.element_id);
     }
   }
 
