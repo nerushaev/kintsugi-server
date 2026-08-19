@@ -148,7 +148,10 @@ const syncPosterProduct = async (productId) => {
 
   await Product.findOneAndUpdate(
     { product_id: String(product.product_id) },
-    { $set: product },
+    // Only Poster-owned skeleton fields are updated here. All content added
+    // in the site admin (description, extra photos, characteristics,
+    // popularity and manual visibility) remains untouched.
+    { $set: { ...product, posterArchived: false } },
     { upsert: true, setDefaultsOnInsert: true }
   );
 };
@@ -163,7 +166,7 @@ const syncPosterProductStock = async (productId) => {
   });
 
   if (!existingProduct) {
-    await Product.create(stock);
+    await Product.create({ ...stock, posterArchived: false });
     return;
   }
 
@@ -232,7 +235,14 @@ const webHookPoster = async (req, res) => {
 
   if (event.object === "product") {
     if (event.action === "removed") {
-      await Product.deleteOne({ product_id: String(event.object_id) });
+      // Poster is the inventory skeleton, while the site owns the enriched
+      // product content. Never delete that content when a Poster product is
+      // removed: archive it and restore it automatically if Poster sends the
+      // product again later.
+      await Product.updateOne(
+        { product_id: String(event.object_id) },
+        { $set: { posterArchived: true, amount: 0 } }
+      );
     } else if (event.action === "added" || event.action === "changed") {
       await syncPosterProduct(event.object_id);
     }

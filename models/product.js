@@ -84,6 +84,10 @@ const productSchema = new Schema({
   websiteHidden: {
     type: Boolean,
     default: false,
+  },
+  posterArchived: {
+    type: Boolean,
+    default: false,
   }
 }, { versionKey: false, timestamps: true }
 );

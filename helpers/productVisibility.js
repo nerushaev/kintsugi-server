@@ -3,6 +3,7 @@ const WEBSITE_EXCLUDED_CATEGORIES = ["Фіз. Магазин"];
 const ACTIVE_INVENTORY_FILTER = {
   category_name: { $nin: WEBSITE_EXCLUDED_CATEGORIES },
   amount: { $gt: 0 },
+  posterArchived: { $ne: true },
 };
 
 const WEBSITE_PRODUCT_FILTER = {
