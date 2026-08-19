@@ -1,5 +1,6 @@
 const { RequestError } = require("../../helpers");
 const { User } = require("../../models/user");
+const Order = require("../../models/order");
 // const { BASE_URL } = process.env;
 
 const verify = async (req, res) => {
@@ -10,12 +11,19 @@ const verify = async (req, res) => {
     throw RequestError(404, "User not found");
   }
 
-  await User.findOneAndUpdate(user._id, {
-    verify: true,
-    verificationToken: null,
-  });
+  const orders = await Order.find({ email: String(user.email).trim().toLowerCase() })
+    .select("orderId")
+    .lean();
 
-  res.redirect("https://kintsugi.org.ua/");
+  await User.findOneAndUpdate(
+    user._id,
+    {
+      $set: { verify: true, verificationToken: null },
+      ...(orders.length ? { $addToSet: { orders: { $each: orders.map(({ orderId }) => orderId) } } } : {}),
+    }
+  );
+
+  res.redirect("https://kintsugi.org.ua/user?emailVerified=1");
 };
 
 module.exports = verify;

@@ -64,6 +64,10 @@ const userSchema = new Schema(
     verificationToken: {
       type: String,
     },
+    verify: {
+      type: Boolean,
+      default: false,
+    },
     refreshToken: {
       type: String,
       default: "",
@@ -102,6 +106,7 @@ const registerSchema = Joi.object({
   email: Joi.string().trim().lowercase().email().max(150).required(),
   password: Joi.string().min(7).max(72).required(),
   phone: phoneSchema.required(),
+  checkoutOrderId: Joi.string().trim().max(100).optional(),
 });
 
 const loginSchema = Joi.object({
