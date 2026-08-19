@@ -45,6 +45,30 @@ const parsePositiveInteger = (value, fallback) => {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 };
 
+const parseSizes = (value) =>
+  String(value || "")
+    .split(",")
+    .map((size) => size.trim())
+    .filter(Boolean)
+    .slice(0, 20);
+
+const SIZE_FILTER_CATEGORIES = new Set(["Косплей", "Lolita fashion"]);
+const SIZE_ORDER = ["XXS", "XS", "S", "M", "L", "XL", "XXL", "2XL", "XXXL", "3XL"];
+
+const sortSizes = (sizes) =>
+  sizes.sort((left, right) => {
+    const leftIndex = SIZE_ORDER.indexOf(left.toUpperCase());
+    const rightIndex = SIZE_ORDER.indexOf(right.toUpperCase());
+
+    if (leftIndex !== -1 || rightIndex !== -1) {
+      if (leftIndex === -1) return 1;
+      if (rightIndex === -1) return -1;
+      return leftIndex - rightIndex;
+    }
+
+    return left.localeCompare(right, "uk", { numeric: true });
+  });
+
 const getContentPriorityIds = async () => {
   const products = await Product.find(
     ACTIVE_INVENTORY_FILTER,
@@ -92,7 +116,9 @@ const getProducts = async (req, res) => {
   const contentStatus = req.query.contentStatus || req.query.contentIssue;
   const sortByContentIssues = req.query.sortByContentIssues === "true";
   const characteristicsReview = req.query.characteristicsReview;
+  const sizes = parseSizes(req.query.size);
   const { category } = req.params;
+  const supportsSizeFilter = SIZE_FILTER_CATEGORIES.has(category);
 
   const match = req.adminScope
     ? { ...ACTIVE_INVENTORY_FILTER }
@@ -107,6 +133,19 @@ const getProducts = async (req, res) => {
     match.category_name = isWebsiteCategory(category)
       ? category
       : { $in: [] };
+  }
+
+  const availableSizesMatch = { ...match };
+
+  if (!req.adminScope && supportsSizeFilter && sizes.length) {
+    appendFilter(match, {
+      modifications: {
+        $elemMatch: {
+          modificator_name: { $in: sizes },
+          size_left: { $gt: 0 },
+        },
+      },
+    });
   }
 
   if (req.adminScope && characteristicsReview === "auto") {
@@ -191,7 +230,24 @@ const getProducts = async (req, res) => {
     }
   );
 
-  const [result] = await Product.aggregate(pipeline);
+  const [result, availableSizesResult] = await Promise.all([
+    Product.aggregate(pipeline),
+    !req.adminScope && supportsSizeFilter
+      ? Product.aggregate([
+          ...(search ? [buildSearchStage(search)] : []),
+          { $match: availableSizesMatch },
+          { $unwind: "$modifications" },
+          {
+            $match: {
+              "modifications.size_left": { $gt: 0 },
+              "modifications.modificator_name": { $type: "string", $ne: "" },
+            },
+          },
+          { $group: { _id: "$modifications.modificator_name" } },
+          { $sort: { _id: 1 } },
+        ])
+      : Promise.resolve([]),
+  ]);
   const totalItems = result.pagination[0]?.totalItems || 0;
 
   res.json({
@@ -200,6 +256,7 @@ const getProducts = async (req, res) => {
     totalPages: Math.max(Math.ceil(totalItems / limit), 1),
     currentPage: page,
     pageSize: limit,
+    availableSizes: sortSizes(availableSizesResult.map(({ _id }) => _id)),
   });
 };
 
