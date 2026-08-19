@@ -230,7 +230,7 @@ const getProducts = async (req, res) => {
     }
   );
 
-  const [result, availableSizesResult] = await Promise.all([
+  const [aggregationResult, availableSizesResult] = await Promise.all([
     Product.aggregate(pipeline),
     !req.adminScope && supportsSizeFilter
       ? Product.aggregate([
@@ -248,6 +248,7 @@ const getProducts = async (req, res) => {
         ])
       : Promise.resolve([]),
   ]);
+  const result = aggregationResult[0] || { pagination: [], data: [] };
   const totalItems = result.pagination[0]?.totalItems || 0;
 
   res.json({
