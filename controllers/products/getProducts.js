@@ -54,6 +54,35 @@ const parseSizes = (value) =>
 
 const SIZE_FILTER_CATEGORIES = new Set(["Косплей", "Lolita fashion"]);
 const SIZE_ORDER = ["XXS", "XS", "S", "M", "L", "XL", "XXL", "2XL", "XXXL", "3XL"];
+const SIZE_ALIASES = {
+  S: ["S", "С"],
+  M: ["M", "М"],
+  L: ["L", "Л"],
+  XL: ["XL", "ХЛ"],
+  XXL: ["XXL", "ХХЛ"],
+};
+const NON_SIZE_VALUES = new Set([
+  "one size",
+  "onesize",
+  "один розмір",
+  "один размер",
+  "без модифікації",
+]);
+
+const normalizeSize = (size) => {
+  const trimmed = String(size || "").trim();
+  const upper = trimmed.toUpperCase();
+  const alias = Object.entries(SIZE_ALIASES).find(([, values]) =>
+    values.some((value) => value.toUpperCase() === upper)
+  );
+  return alias ? alias[0] : trimmed;
+};
+
+const expandSizeAliases = (sizes) =>
+  [...new Set(sizes.flatMap((size) => SIZE_ALIASES[normalizeSize(size)] || [size]))];
+
+const isSelectableSize = (size) =>
+  size && !NON_SIZE_VALUES.has(String(size).trim().toLowerCase());
 
 const sortSizes = (sizes) =>
   sizes.sort((left, right) => {
@@ -141,7 +170,7 @@ const getProducts = async (req, res) => {
     appendFilter(match, {
       modifications: {
         $elemMatch: {
-          modificator_name: { $in: sizes },
+          modificator_name: { $in: expandSizeAliases(sizes) },
           size_left: { $gt: 0 },
         },
       },
@@ -257,7 +286,13 @@ const getProducts = async (req, res) => {
     totalPages: Math.max(Math.ceil(totalItems / limit), 1),
     currentPage: page,
     pageSize: limit,
-    availableSizes: sortSizes(availableSizesResult.map(({ _id }) => _id)),
+    availableSizes: sortSizes([
+      ...new Set(
+        availableSizesResult
+          .map(({ _id }) => normalizeSize(_id))
+          .filter(isSelectableSize)
+      ),
+    ]),
   });
 };
 
