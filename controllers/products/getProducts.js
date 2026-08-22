@@ -40,6 +40,22 @@ const appendFilter = (match, filter) => {
   match.$and = [...(match.$and || []), filter];
 };
 
+const escapeRegExp = (value) =>
+  value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const buildSearchFilter = (search) => {
+  const pattern = new RegExp(escapeRegExp(search.slice(0, 100)), "i");
+
+  return {
+    $or: [
+      { product_name: pattern },
+      { character: pattern },
+      { fandom: pattern },
+      { category_name: pattern },
+    ],
+  };
+};
+
 const parsePositiveInteger = (value, fallback) => {
   const parsed = Number.parseInt(value, 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
@@ -119,20 +135,6 @@ const getContentPriorityIds = async () => {
   return [...criticalIds];
 };
 
-const buildSearchStage = (search) => ({
-  $search: {
-    index: "search",
-    text: {
-      query: search,
-      path: "product_name",
-      fuzzy: {
-        maxEdits: 2,
-        prefixLength: 1,
-      },
-    },
-  },
-});
-
 const getProducts = async (req, res) => {
   const page = parsePositiveInteger(req.query.page, 1);
   const limit = Math.min(
@@ -165,6 +167,11 @@ const getProducts = async (req, res) => {
   }
 
   const availableSizesMatch = { ...match };
+
+  if (search) {
+    appendFilter(match, buildSearchFilter(search));
+    appendFilter(availableSizesMatch, buildSearchFilter(search));
+  }
 
   if (!req.adminScope && supportsSizeFilter && sizes.length) {
     appendFilter(match, {
@@ -219,7 +226,6 @@ const getProducts = async (req, res) => {
   const criticalIds = sortByContentIssues ? await getContentPriorityIds() : [];
 
   const pipeline = [];
-  if (search) pipeline.push(buildSearchStage(search));
   pipeline.push({ $match: match });
 
   if (criticalIds.length) {
@@ -263,7 +269,6 @@ const getProducts = async (req, res) => {
     Product.aggregate(pipeline),
     !req.adminScope && supportsSizeFilter
       ? Product.aggregate([
-          ...(search ? [buildSearchStage(search)] : []),
           { $match: availableSizesMatch },
           { $unwind: "$modifications" },
           {
