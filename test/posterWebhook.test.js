@@ -312,6 +312,7 @@ test("worker updates type 3 modification without calling Poster API", async () =
   await webHookPoster.processPosterEvent(
     signedStockEvent({
       type: 3,
+      product_id: 42,
       element_id: 10,
       storage_id: 1,
       value_absolute: 6,

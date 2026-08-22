@@ -162,31 +162,23 @@ const normalizeStockAmount = (value) =>
 
 const updateStockFromWebhook = async (stockData) => {
   const amount = normalizeStockAmount(stockData.value_absolute);
-
-  // Keep accepting product_id for compatibility with previously observed
-  // payloads, although Poster documents element_id as the stock entity key.
-  if (stockData.product_id) {
-    await Product.updateOne(
-      { product_id: String(stockData.product_id) },
-      { $set: { amount } }
-    );
-    return;
-  }
-
-  if (!stockData.element_id) return;
-
-  const elementId = String(stockData.element_id);
   const stockType = Number(stockData.type);
+  const elementId = stockData.element_id
+    ? String(stockData.element_id)
+    : null;
 
   if (stockType === 2) {
+    const productId = stockData.product_id || elementId;
+    if (!productId) return;
+
     await Product.updateOne(
-      { product_id: elementId },
+      { product_id: String(productId) },
       { $set: { amount } }
     );
     return;
   }
 
-  if (stockType !== 3) return;
+  if (stockType !== 3 || !elementId) return;
 
   const product = await Product.findOne({
     "modifications.ingredient_id": elementId,
