@@ -156,79 +156,57 @@ const syncPosterProduct = async (productId) => {
   );
 };
 
-const syncPosterProductStock = async (productId) => {
-  const posterProduct = await posterRequest("menu.getProduct", {
-    product_id: productId,
-  });
-  const stock = await buildPosterProduct(posterProduct);
-  const existingProduct = await Product.findOne({
-    product_id: String(productId),
-  });
+const normalizeStockAmount = (value) =>
+  Math.max(0, Math.floor(Number(value) || 0));
 
-  if (!existingProduct) {
-    await Product.create({ ...stock, posterArchived: false });
-    return;
-  }
+const updateStockFromWebhook = async (stockData) => {
+  const amount = normalizeStockAmount(stockData.value_absolute);
 
-  const update = { amount: stock.amount };
-
-  if (stock.modifications.length > 0) {
-    const stockByIngredient = new Map(
-      stock.modifications.map((item) => [String(item.ingredient_id), item.size_left])
+  // Keep accepting product_id for compatibility with previously observed
+  // payloads, although Poster documents element_id as the stock entity key.
+  if (stockData.product_id) {
+    await Product.updateOne(
+      { product_id: String(stockData.product_id) },
+      { $set: { amount } }
     );
-    update.modifications = existingProduct.modifications.map((item) => {
-      // `modifications` is stored as an Array, so Mongoose may return either
-      // a subdocument or a plain object. Preserve every existing field and
-      // update only the Poster-owned stock value.
-      const current =
-        typeof item?.toObject === "function" ? item.toObject() : { ...item };
-
-      return {
-        ...current,
-        size_left:
-          stockByIngredient.get(String(item.ingredient_id)) ?? item.size_left,
-      };
-    });
-  }
-
-  await Product.updateOne(
-    { product_id: String(productId) },
-    { $set: update }
-  );
-};
-
-const syncPosterStockElement = async (elementId) => {
-  const leftovers = await posterRequest("storage.getStorageLeftovers", {
-    type: 2,
-    zero_leftovers: true,
-  });
-  const leftover = leftovers.find(
-    (item) => String(item.ingredient_id) === String(elementId)
-  );
-
-  if (!leftover?.ingredient_name) return;
-
-  const localProduct = await Product.findOne({
-    product_name: leftover.ingredient_name,
-  }).select("product_id");
-
-  if (localProduct?.product_id) {
-    await syncPosterProductStock(localProduct.product_id);
     return;
   }
 
-  // A stock event can arrive before the product event. Locate the Poster
-  // product by its exact name and create it instead of silently dropping it.
-  const posterProducts = await posterRequest("menu.getProducts");
-  const posterProduct = posterProducts.find(
-    (item) =>
-      normalizeProductName(item.product_name) ===
-      normalizeProductName(leftover.ingredient_name)
+  if (!stockData.element_id) return;
+
+  const elementId = String(stockData.element_id);
+  const stockType = Number(stockData.type);
+
+  if (stockType === 2) {
+    await Product.updateOne(
+      { product_id: elementId },
+      { $set: { amount } }
+    );
+    return;
+  }
+
+  if (stockType !== 3) return;
+
+  const product = await Product.findOne({
+    "modifications.ingredient_id": elementId,
+  });
+
+  if (!product) return;
+
+  const modificationIndex = product.modifications.findIndex(
+    (item) => String(item.ingredient_id) === elementId
   );
 
-  if (posterProduct?.product_id) {
-    await syncPosterProduct(posterProduct.product_id);
-  }
+  if (modificationIndex === -1) return;
+
+  product.modifications[modificationIndex].size_left = amount;
+  product.amount = product.modifications.reduce(
+    (sum, item) => sum + normalizeStockAmount(item.size_left),
+    0
+  );
+  product.markModified("modifications");
+
+  await product.save();
 };
 
 const webHookPoster = async (req, res) => {
@@ -264,11 +242,7 @@ const webHookPoster = async (req, res) => {
       return res.status(400).json({ message: "Invalid Poster stock payload" });
     }
 
-    if (stockData.product_id) {
-      await syncPosterProductStock(stockData.product_id);
-    } else if (stockData.element_id) {
-      await syncPosterStockElement(stockData.element_id);
-    }
+    await updateStockFromWebhook(stockData);
   }
 
   return res.status(200).send("Success");
