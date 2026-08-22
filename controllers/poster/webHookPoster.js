@@ -176,11 +176,19 @@ const syncPosterProductStock = async (productId) => {
     const stockByIngredient = new Map(
       stock.modifications.map((item) => [String(item.ingredient_id), item.size_left])
     );
-    update.modifications = existingProduct.modifications.map((item) => ({
-      ...item.toObject(),
-      size_left:
-        stockByIngredient.get(String(item.ingredient_id)) ?? item.size_left,
-    }));
+    update.modifications = existingProduct.modifications.map((item) => {
+      // `modifications` is stored as an Array, so Mongoose may return either
+      // a subdocument or a plain object. Preserve every existing field and
+      // update only the Poster-owned stock value.
+      const current =
+        typeof item?.toObject === "function" ? item.toObject() : { ...item };
+
+      return {
+        ...current,
+        size_left:
+          stockByIngredient.get(String(item.ingredient_id)) ?? item.size_left,
+      };
+    });
   }
 
   await Product.updateOne(
