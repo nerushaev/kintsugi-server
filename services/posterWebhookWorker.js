@@ -17,8 +17,26 @@ const processNextEvent = async () => {
   isRunning = true;
 
   try {
+    // Keep global delivery order. If an older event is waiting for a retry,
+    // processing a newer absolute stock value first would let the old value
+    // overwrite it later.
+    const oldestEvent = await PosterWebhookEvent.findOne({
+      status: { $in: ["pending", "processing"] },
+    })
+      .sort({ createdAt: 1 })
+      .select("_id status nextAttemptAt");
+
+    if (
+      !oldestEvent ||
+      oldestEvent.status === "processing" ||
+      oldestEvent.nextAttemptAt > new Date()
+    ) {
+      return;
+    }
+
     const event = await PosterWebhookEvent.findOneAndUpdate(
       {
+        _id: oldestEvent._id,
         status: "pending",
         nextAttemptAt: { $lte: new Date() },
       },
@@ -26,7 +44,7 @@ const processNextEvent = async () => {
         $set: { status: "processing", lockedAt: new Date() },
         $inc: { attempts: 1 },
       },
-      { sort: { createdAt: 1 }, new: true }
+      { new: true }
     );
 
     if (!event) return;
@@ -82,4 +100,4 @@ const startPosterWebhookWorker = async () => {
   timer = setInterval(processNextEvent, POLL_INTERVAL_MS);
 };
 
-module.exports = { startPosterWebhookWorker };
+module.exports = { startPosterWebhookWorker, processNextEvent };
