@@ -2,6 +2,7 @@ const axios = require("axios");
 const crypto = require("crypto");
 const MD5 = require("crypto-js/md5");
 const Product = require("../../models/product");
+const PosterWebhookEvent = require("../../models/posterWebhookEvent");
 
 const {
   POSTER_URL_API,
@@ -209,16 +210,7 @@ const updateStockFromWebhook = async (stockData) => {
   await product.save();
 };
 
-const webHookPoster = async (req, res) => {
-  if (!POSTER_WEBHOOK_SECRET) {
-    return res.status(503).json({ message: "Poster webhook is not configured" });
-  }
-  if (!verifyWebhook(req.body)) {
-    return res.status(400).json({ message: "Invalid Poster signature" });
-  }
-
-  const event = req.body;
-
+const processPosterEvent = async (event) => {
   if (event.object === "product") {
     if (event.action === "removed") {
       // Poster is the inventory skeleton, while the site owns the enriched
@@ -239,13 +231,62 @@ const webHookPoster = async (req, res) => {
     try {
       stockData = JSON.parse(event.data || "{}");
     } catch {
-      return res.status(400).json({ message: "Invalid Poster stock payload" });
+      throw new Error("Invalid Poster stock payload");
     }
 
     await updateStockFromWebhook(stockData);
+  }
+};
+
+const eventKeyFor = (event) =>
+  crypto
+    .createHash("sha256")
+    .update(
+      [
+        event.account,
+        event.object,
+        event.object_id,
+        event.action,
+        event.data || "",
+        event.time,
+      ].join(";")
+    )
+    .digest("hex");
+
+const webHookPoster = async (req, res) => {
+  try {
+    if (!POSTER_WEBHOOK_SECRET) {
+      console.error("Poster webhook received while POSTER_WEBHOOK_SECRET is missing");
+      return res.status(200).send("Ignored");
+    }
+
+    if (!verifyWebhook(req.body)) {
+      console.warn("Poster webhook with invalid signature was ignored");
+      return res.status(200).send("Ignored");
+    }
+
+    const event = req.body;
+    await PosterWebhookEvent.updateOne(
+      { eventKey: eventKeyFor(event) },
+      {
+        $setOnInsert: {
+          eventKey: eventKeyFor(event),
+          payload: event,
+          status: "pending",
+          attempts: 0,
+          nextAttemptAt: new Date(),
+        },
+      },
+      { upsert: true, maxTimeMS: 2000 }
+    );
+  } catch (error) {
+    // Poster stops all following deliveries when an earlier webhook does not
+    // receive 200. Log intake failures, but never block Poster's queue.
+    console.error("Poster webhook could not be queued:", error);
   }
 
   return res.status(200).send("Success");
 };
 
 module.exports = webHookPoster;
+module.exports.processPosterEvent = processPosterEvent;

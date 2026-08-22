@@ -5,15 +5,24 @@ const test = require("node:test");
 
 const calls = {
   poster: 0,
-  updateOne: [],
+  productUpdateOne: [],
+  queueUpdateOne: [],
+  queueError: null,
   findOneResult: null,
 };
 
 const Product = {
   updateOne: async (...args) => {
-    calls.updateOne.push(args);
+    calls.productUpdateOne.push(args);
   },
   findOne: async () => calls.findOneResult,
+};
+
+const PosterWebhookEvent = {
+  updateOne: async (...args) => {
+    calls.queueUpdateOne.push(args);
+    if (calls.queueError) throw calls.queueError;
+  },
 };
 
 const originalLoad = Module._load;
@@ -27,6 +36,7 @@ Module._load = function load(request, parent, isMain) {
     };
   }
   if (request === "../../models/product") return Product;
+  if (request === "../../models/posterWebhookEvent") return PosterWebhookEvent;
   return originalLoad.call(this, request, parent, isMain);
 };
 
@@ -63,7 +73,7 @@ const signedStockEvent = (data) => {
   return event;
 };
 
-const invoke = async (data) => {
+const invoke = async (event) => {
   const response = { statusCode: 200, body: null };
   const res = {
     status(code) {
@@ -80,32 +90,73 @@ const invoke = async (data) => {
     },
   };
 
-  await webHookPoster({ body: signedStockEvent(data) }, res);
+  await webHookPoster({ body: event }, res);
   return response;
 };
 
 test.beforeEach(() => {
   calls.poster = 0;
-  calls.updateOne = [];
+  calls.productUpdateOne = [];
+  calls.queueUpdateOne = [];
+  calls.queueError = null;
   calls.findOneResult = null;
 });
 
-test("updates type 2 product stock without calling Poster API", async () => {
-  const response = await invoke({
+test("queues a valid webhook and returns 200 without processing it inline", async () => {
+  const event = signedStockEvent({
     type: 2,
     element_id: 42,
     storage_id: 1,
     value_absolute: 7.9,
   });
+  const response = await invoke(event);
 
   assert.equal(response.statusCode, 200);
+  assert.equal(response.body, "Success");
+  assert.equal(calls.queueUpdateOne.length, 1);
+  assert.equal(calls.queueUpdateOne[0][1].$setOnInsert.payload, event);
   assert.equal(calls.poster, 0);
-  assert.deepEqual(calls.updateOne, [
+  assert.equal(calls.productUpdateOne.length, 0);
+});
+
+test("returns 200 even when the webhook cannot be queued", async () => {
+  calls.queueError = new Error("Database unavailable");
+  const response = await invoke(
+    signedStockEvent({ type: 2, element_id: 42, value_absolute: 7 })
+  );
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body, "Success");
+});
+
+test("returns 200 and ignores an invalid signature", async () => {
+  const event = signedStockEvent({ type: 2, element_id: 42, value_absolute: 7 });
+  event.verify = "invalid";
+
+  const response = await invoke(event);
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body, "Ignored");
+  assert.equal(calls.queueUpdateOne.length, 0);
+});
+
+test("worker updates type 2 product stock without calling Poster API", async () => {
+  await webHookPoster.processPosterEvent(
+    signedStockEvent({
+      type: 2,
+      element_id: 42,
+      storage_id: 1,
+      value_absolute: 7.9,
+    })
+  );
+
+  assert.equal(calls.poster, 0);
+  assert.deepEqual(calls.productUpdateOne, [
     [{ product_id: "42" }, { $set: { amount: 7 } }],
   ]);
 });
 
-test("updates type 3 modification without calling Poster API", async () => {
+test("worker updates type 3 modification without calling Poster API", async () => {
   let saved = false;
   let markedPath = null;
   calls.findOneResult = {
@@ -122,14 +173,15 @@ test("updates type 3 modification without calling Poster API", async () => {
     },
   };
 
-  const response = await invoke({
-    type: 3,
-    element_id: 10,
-    storage_id: 1,
-    value_absolute: 6,
-  });
+  await webHookPoster.processPosterEvent(
+    signedStockEvent({
+      type: 3,
+      element_id: 10,
+      storage_id: 1,
+      value_absolute: 6,
+    })
+  );
 
-  assert.equal(response.statusCode, 200);
   assert.equal(calls.poster, 0);
   assert.equal(calls.findOneResult.modifications[0].size_left, 6);
   assert.equal(calls.findOneResult.amount, 9);
@@ -137,15 +189,16 @@ test("updates type 3 modification without calling Poster API", async () => {
   assert.equal(saved, true);
 });
 
-test("ignores unrelated stock types without calling Poster API", async () => {
-  const response = await invoke({
-    type: 1,
-    element_id: 999,
-    storage_id: 1,
-    value_absolute: 4,
-  });
+test("worker ignores unrelated stock types without calling Poster API", async () => {
+  await webHookPoster.processPosterEvent(
+    signedStockEvent({
+      type: 1,
+      element_id: 999,
+      storage_id: 1,
+      value_absolute: 4,
+    })
+  );
 
-  assert.equal(response.statusCode, 200);
-  assert.equal(response.body, "Success");
   assert.equal(calls.poster, 0);
+  assert.equal(calls.productUpdateOne.length, 0);
 });
