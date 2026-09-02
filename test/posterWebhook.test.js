@@ -252,12 +252,18 @@ test("product changed preserves fields owned by the website", async () => {
       category_name: "Poster category",
       menu_category_id: 7,
       price: { 1: 5000 },
-      modifications: [],
+      modifications: [
+        {
+          ingredient_id: 100,
+          modificator_name: "S",
+          modificator_barcode: "1234567890123",
+          spots: [{ price: { 1: 5000 } }],
+        },
+      ],
     },
     [
       {
-        ingredient_id: 42,
-        ingredient_name: "Poster name",
+        ingredient_id: 100,
         ingredient_left: 3,
       },
     ],
@@ -274,6 +280,7 @@ test("product changed preserves fields owned by the website", async () => {
   assert.deepEqual(filter, { product_id: "42" });
   assert.equal(update.$set.amount, 3);
   assert.equal(update.$set.product_name, "Poster name");
+  assert.equal(update.$set.modifications[0].barcode, "1234567890123");
   for (const websiteField of [
     "description",
     "photo_extra",

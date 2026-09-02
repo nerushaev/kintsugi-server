@@ -97,6 +97,7 @@ const buildPosterProduct = async (posterProduct) => {
       return {
         ingredient_id: modification.ingredient_id,
         modificator_name: modification.modificator_name,
+        barcode: String(modification.modificator_barcode || "").trim(),
         size_left: Math.max(0, Math.floor(Number(leftover?.ingredient_left) || 0)),
         modificator_price:
           firstPrice(modification.spots?.[0]?.price) ||
