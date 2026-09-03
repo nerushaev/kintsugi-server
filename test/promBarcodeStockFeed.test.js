@@ -7,8 +7,9 @@ const {
 
 test("collects product amount and modification size_left by barcode", () => {
   const rows = collectBarcodeStock([
-    { barcode: "111", amount: 4, modifications: [] },
+    { product_name: "Перший", barcode: "111", amount: 4, modifications: [] },
     {
+      product_name: "Другий",
       barcode: "",
       amount: 5,
       modifications: [
@@ -18,31 +19,34 @@ test("collects product amount and modification size_left by barcode", () => {
     },
   ]);
   assert.deepEqual(rows, [
-    { barcode: "111", stock: 4 },
-    { barcode: "222", stock: 3 },
-    { barcode: "333", stock: 0 },
+    { barcode: "111", name: "Перший", stock: 4 },
+    { barcode: "222", name: "Другий", stock: 3 },
+    { barcode: "333", name: "Другий", stock: 0 },
   ]);
 });
 
-test("creates an XLSX containing only code, availability and quantity", () => {
+test("creates an XLSX with the required name and stock fields", () => {
   const { workbook, rowCount } = buildBarcodeStockWorkbook([
-    { barcode: "0123456789012", amount: 2, modifications: [] },
-    { barcode: "9999999999999", amount: 0, modifications: [] },
+    { product_name: "Товар 1", barcode: "0123456789012", amount: 2, modifications: [] },
+    { product_name: "Товар 2", barcode: "9999999999999", amount: 0, modifications: [] },
   ]);
   const sheet = workbook.getWorksheet("Export Products Sheet");
   assert.equal(rowCount, 2);
   assert.deepEqual(sheet.getRow(1).values.slice(1), [
     "Код_товару",
+    "Назва_позиції",
     "Наявність",
     "Кількість",
   ]);
   assert.deepEqual(sheet.getRow(2).values.slice(1), [
     "0123456789012",
+    "Товар 1",
     "+",
     2,
   ]);
   assert.deepEqual(sheet.getRow(3).values.slice(1), [
     "9999999999999",
+    "Товар 2",
     "-",
     0,
   ]);
@@ -62,10 +66,12 @@ test("rejects duplicate barcodes", () => {
 test("limits output to an explicit barcode allowlist", () => {
   const rows = collectBarcodeStock(
     [
-      { barcode: "keep", amount: 3, modifications: [] },
-      { barcode: "skip", amount: 9, modifications: [] },
+      { product_name: "Залишити", barcode: "keep", amount: 3, modifications: [] },
+      { product_name: "Пропустити", barcode: "skip", amount: 9, modifications: [] },
     ],
     new Set(["keep"])
   );
-  assert.deepEqual(rows, [{ barcode: "keep", stock: 3 }]);
+  assert.deepEqual(rows, [
+    { barcode: "keep", name: "Залишити", stock: 3 },
+  ]);
 });

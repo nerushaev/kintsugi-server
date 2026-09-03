@@ -1,6 +1,7 @@
 const ExcelJS = require("exceljs");
 
 const asBarcode = (value) => String(value ?? "").trim();
+const asName = (value) => String(value ?? "").trim();
 
 const normalizeStock = (value) => {
   const parsed = Number(value);
@@ -11,13 +12,17 @@ const collectBarcodeStock = (products, allowedBarcodes = null) => {
   const rows = [];
   const seen = new Set();
   const duplicates = new Set();
-  const add = (barcodeValue, stockValue) => {
+  const add = (barcodeValue, stockValue, nameValue) => {
     const barcode = asBarcode(barcodeValue);
     if (!barcode) return;
     if (allowedBarcodes && !allowedBarcodes.has(barcode)) return;
     if (seen.has(barcode)) duplicates.add(barcode);
     seen.add(barcode);
-    rows.push({ barcode, stock: normalizeStock(stockValue) });
+    rows.push({
+      barcode,
+      name: asName(nameValue) || `Товар ${barcode}`,
+      stock: normalizeStock(stockValue),
+    });
   };
 
   products.forEach((product) => {
@@ -26,10 +31,16 @@ const collectBarcodeStock = (products, allowedBarcodes = null) => {
       : [];
     if (modifications.length) {
       modifications.forEach((modification) => {
-        add(modification.barcode, modification.size_left);
+        const variantName = asName(modification.modificator_name);
+        const productName = asName(product.product_name);
+        add(
+          modification.barcode,
+          modification.size_left,
+          [productName, variantName].filter(Boolean).join(" — ")
+        );
       });
     } else {
-      add(product.barcode, product.amount);
+      add(product.barcode, product.amount, product.product_name);
     }
   });
 
@@ -49,21 +60,23 @@ const buildBarcodeStockWorkbook = (products, allowedBarcodes = null) => {
   const sheet = workbook.addWorksheet("Export Products Sheet");
   sheet.columns = [
     { header: "Код_товару", key: "code", width: 28 },
+    { header: "Назва_позиції", key: "name", width: 48 },
     { header: "Наявність", key: "availability", width: 14 },
     { header: "Кількість", key: "quantity", width: 14 },
   ];
-  rows.forEach(({ barcode, stock }) => {
+  rows.forEach(({ barcode, name, stock }) => {
     sheet.addRow({
       code: barcode,
+      name,
       availability: stock > 0 ? "+" : "-",
       quantity: stock,
     });
   });
   sheet.getColumn(1).numFmt = "@";
-  sheet.getColumn(3).numFmt = "0";
+  sheet.getColumn(4).numFmt = "0";
   sheet.getRow(1).font = { bold: true };
   sheet.views = [{ state: "frozen", ySplit: 1 }];
-  sheet.autoFilter = { from: "A1", to: "C1" };
+  sheet.autoFilter = { from: "A1", to: "D1" };
   return { workbook, rowCount: rows.length };
 };
 

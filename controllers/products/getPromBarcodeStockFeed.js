@@ -48,7 +48,7 @@ const getPromBarcodeStockFeed = async (req, res) => {
         { "modifications.barcode": { $type: "string", $ne: "" } },
       ],
     },
-    "barcode amount modifications"
+    "product_name barcode amount modifications"
   ).lean();
   const { workbook, rowCount } = buildBarcodeStockWorkbook(
     products,

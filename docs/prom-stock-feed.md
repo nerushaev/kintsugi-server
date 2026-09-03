@@ -26,10 +26,12 @@ catalog can be requested explicitly:
 GET /api/products/feeds/prom-stock-by-barcode.xlsx?token=<token>&scope=all
 ```
 
-It contains only `Код_товару`, `Наявність` and `Кількість`. MongoDB `barcode`
-is written to `Код_товару`; product `amount` and modification `size_left` are
-written to `Кількість`. The feed intentionally contains no title, description,
-price, image or category and is not intended to create product cards.
+It contains `Код_товару`, the Prom-required validation field
+`Назва_позиції`, `Наявність` and `Кількість`. MongoDB `barcode` is written to
+`Код_товару`; product `amount` and modification `size_left` are written to
+`Кількість`. Configure the import to update stock fields only. The feed
+contains no description, price, image or category and is not intended to
+create product cards.
 
 Required environment variable:
 
