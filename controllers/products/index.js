@@ -17,6 +17,7 @@ const reorderProductPhotos = require("./reorderProductPhotos");
 const updateCharacteristics = require("./updateCharacteristics");
 const verifyCharacteristics = require("./verifyCharacteristics");
 const updatePopularStatus = require("./updatePopularStatus");
+const getPromStockFeed = require("./getPromStockFeed");
 
 module.exports = {
   getProducts,
@@ -38,4 +39,5 @@ module.exports = {
   updateCharacteristics,
   verifyCharacteristics,
   updatePopularStatus,
+  getPromStockFeed,
 };

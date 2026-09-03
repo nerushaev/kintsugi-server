@@ -19,6 +19,7 @@ router.get("/wish", authenticate, ctrlWrapper(productCtrl.getWishListProduct));
 
 router.get("/", ctrlWrapper(productCtrl.getProducts));
 router.get("/all", ctrlWrapper(productCtrl.getAllProducts));
+router.get("/feeds/prom-stock.xlsx", ctrlWrapper(productCtrl.getPromStockFeed));
 router.get(
   "/admin",
   authenticate,
