@@ -18,6 +18,7 @@ const updateCharacteristics = require("./updateCharacteristics");
 const verifyCharacteristics = require("./verifyCharacteristics");
 const updatePopularStatus = require("./updatePopularStatus");
 const getPromStockFeed = require("./getPromStockFeed");
+const getPromBarcodeStockFeed = require("./getPromBarcodeStockFeed");
 
 module.exports = {
   getProducts,
@@ -40,4 +41,5 @@ module.exports = {
   verifyCharacteristics,
   updatePopularStatus,
   getPromStockFeed,
+  getPromBarcodeStockFeed,
 };

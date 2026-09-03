@@ -5,7 +5,7 @@
   "scripts": {
     "start": "cross-env NODE_ENV=production node ./server.js",
     "start:dev": "cross-env NODE_ENV=development nodemon ./server.js",
-    "test": "node --test test/posterWebhook.test.js test/promStockFeed.test.js",
+    "test": "node --test test/posterWebhook.test.js test/promStockFeed.test.js test/promBarcodeStockFeed.test.js",
     "payments:reconcile": "node ./scripts/reconcileMonobankPayments.js",
     "poster:reconcile-stock": "node ./scripts/reconcilePosterStock.js",
     "poster:sync-barcodes": "node ./scripts/syncPosterBarcodes.js",
