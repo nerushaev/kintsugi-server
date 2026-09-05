@@ -166,7 +166,7 @@ const syncPosterProduct = async (productId) => {
 const normalizeStockAmount = (value) =>
   Math.max(0, Math.floor(Number(value) || 0));
 
-const updateStockFromWebhook = async (stockData) => {
+const updateStockFromWebhook = async (stockData, eventObjectId) => {
   const amount = normalizeStockAmount(stockData.value_absolute);
   const stockType = Number(stockData.type);
   const elementId = stockData.element_id
@@ -184,19 +184,37 @@ const updateStockFromWebhook = async (stockData) => {
     return;
   }
 
-  if (stockType !== 3 || !elementId) return;
+  if (stockType !== 3) return;
+
+  // For modification stock events Poster puts the modification ingredient_id
+  // in the outer webhook object_id. data.element_id is a different internal
+  // identifier and cannot be matched to modifications[].ingredient_id.
+  const modificationIngredientId = eventObjectId
+    ? String(eventObjectId)
+    : elementId;
+  if (!modificationIngredientId) {
+    throw new Error("Poster modification stock event has no ingredient id");
+  }
 
   const product = await Product.findOne({
-    "modifications.ingredient_id": elementId,
+    "modifications.ingredient_id": modificationIngredientId,
   });
 
-  if (!product) return;
+  if (!product) {
+    throw new Error(
+      `Poster modification not found for ingredient_id ${modificationIngredientId}`
+    );
+  }
 
   const modificationIndex = product.modifications.findIndex(
-    (item) => String(item.ingredient_id) === elementId
+    (item) => String(item.ingredient_id) === modificationIngredientId
   );
 
-  if (modificationIndex === -1) return;
+  if (modificationIndex === -1) {
+    throw new Error(
+      `Poster modification not found for ingredient_id ${modificationIngredientId}`
+    );
+  }
 
   product.modifications[modificationIndex].size_left = amount;
   product.amount = product.modifications.reduce(
@@ -232,7 +250,7 @@ const processPosterEvent = async (event) => {
       throw new Error("Invalid Poster stock payload");
     }
 
-    await updateStockFromWebhook(stockData);
+    await updateStockFromWebhook(stockData, event.object_id);
   }
 };
 

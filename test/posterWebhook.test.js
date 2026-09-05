@@ -94,11 +94,11 @@ Module._load = function loadWorker(request, parent, isMain) {
 const { processNextEvent } = require("../services/posterWebhookWorker");
 Module._load = originalLoad;
 
-const signedStockEvent = (data) => {
+const signedStockEvent = (data, objectId = "1") => {
   const event = {
     account: "test-account",
     object: "stock",
-    object_id: "1",
+    object_id: String(objectId),
     action: "changed",
     data: JSON.stringify(data),
     time: "1234567890",
@@ -300,7 +300,7 @@ test("product changed preserves fields owned by the website", async () => {
   assert.equal(options.upsert, true);
 });
 
-test("worker updates type 3 modification without calling Poster API", async () => {
+test("worker uses outer object_id to update a type 3 modification", async () => {
   let saved = false;
   let markedPath = null;
   calls.findOneResult = {
@@ -318,13 +318,16 @@ test("worker updates type 3 modification without calling Poster API", async () =
   };
 
   await webHookPoster.processPosterEvent(
-    signedStockEvent({
-      type: 3,
-      product_id: 42,
-      element_id: 10,
-      storage_id: 1,
-      value_absolute: 6,
-    })
+    signedStockEvent(
+      {
+        type: 3,
+        product_id: 42,
+        element_id: 534,
+        storage_id: 1,
+        value_absolute: 6,
+      },
+      10
+    )
   );
 
   assert.equal(calls.poster, 0);
@@ -332,6 +335,26 @@ test("worker updates type 3 modification without calling Poster API", async () =
   assert.equal(calls.findOneResult.amount, 9);
   assert.equal(markedPath, "modifications");
   assert.equal(saved, true);
+});
+
+test("worker fails a type 3 event when its modification is not found", async () => {
+  calls.findOneResult = null;
+
+  await assert.rejects(
+    webHookPoster.processPosterEvent(
+      signedStockEvent(
+        {
+          type: 3,
+          product_id: 42,
+          element_id: 534,
+          storage_id: 1,
+          value_absolute: 0,
+        },
+        2348
+      )
+    ),
+    /Poster modification not found for ingredient_id 2348/
+  );
 });
 
 test("worker ignores unrelated stock types without calling Poster API", async () => {
