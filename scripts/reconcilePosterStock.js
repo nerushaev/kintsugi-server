@@ -51,6 +51,22 @@ const loadPosterLeftovers = async () => {
   return data.response;
 };
 
+const loadPosterProducts = async () => {
+  const baseUrl = String(POSTER_URL_API || "").replace(/\/$/, "");
+  const { data } = await axios.get(`${baseUrl}/menu.getProducts`, {
+    params: { token: POSTER_ACCESS_TOKEN },
+    timeout: 30000,
+  });
+
+  if (data?.error || !Array.isArray(data?.response)) {
+    throw new Error(
+      `Poster menu.getProducts failed: ${data?.error?.message || "invalid response"}`
+    );
+  }
+
+  return data.response;
+};
+
 const main = async () => {
   mongoose.set("strictQuery", true);
 
@@ -58,7 +74,10 @@ const main = async () => {
     throw new Error("DB_HOST and Poster API environment variables are required");
   }
 
-  const leftovers = await loadPosterLeftovers();
+  const [leftovers, posterProducts] = await Promise.all([
+    loadPosterLeftovers(),
+    loadPosterProducts(),
+  ]);
   const productLeftovers = leftovers.filter(
     (item) => String(item.ingredients_type) === "2"
   );
@@ -77,6 +96,9 @@ const main = async () => {
 
   const leftoversById = new Map(
     productLeftovers.map((item) => [String(item.ingredient_id), item])
+  );
+  const posterProductsById = new Map(
+    posterProducts.map((product) => [String(product.product_id), product])
   );
   const leftoversByName = new Map();
 
@@ -165,10 +187,15 @@ const main = async () => {
     }
 
     const nameMatches = leftoversByName.get(normalizeName(product.product_name)) || [];
+    const posterProduct = posterProductsById.get(String(product.product_id));
+    const byIngredientId = posterProduct?.ingredient_id
+      ? leftoversById.get(String(posterProduct.ingredient_id))
+      : null;
     const leftover =
-      nameMatches.length === 1
+      byIngredientId ||
+      (nameMatches.length === 1
         ? nameMatches[0]
-        : leftoversById.get(String(product.product_id));
+        : leftoversById.get(String(product.product_id)));
 
     if (!leftover) {
       unmatched.push({ product_id: product.product_id, product_name: product.product_name });
