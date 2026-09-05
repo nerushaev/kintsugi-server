@@ -248,6 +248,7 @@ test("product changed preserves fields owned by the website", async () => {
   calls.posterResponses = [
     {
       product_id: 42,
+      ingredient_id: 100,
       product_name: "Poster name",
       category_name: "Poster category",
       menu_category_id: 7,

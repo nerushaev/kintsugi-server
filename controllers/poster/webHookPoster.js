@@ -64,15 +64,20 @@ const normalizeProductName = (value) =>
     .toLocaleLowerCase("uk-UA");
 
 const findProductLeftover = (leftovers, posterProduct) => {
+  if (posterProduct.ingredient_id) {
+    const byIngredientId = leftovers.find(
+      (item) =>
+        String(item.ingredient_id) === String(posterProduct.ingredient_id)
+    );
+    if (byIngredientId) return byIngredientId;
+  }
+
   const productName = normalizeProductName(posterProduct.product_name);
 
-  // Poster product_id and storage ingredient_id are not guaranteed to be the
-  // same. Prefer the exact product name so an unrelated ingredient with a
-  // coincidentally matching id cannot zero out the product stock.
-  const byName = leftovers.find(
+  const byName = leftovers.filter(
     (item) => normalizeProductName(item.ingredient_name) === productName
   );
-  if (byName) return byName;
+  if (byName.length === 1) return byName[0];
 
   return leftovers.find(
     (item) => String(item.ingredient_id) === String(posterProduct.product_id)
