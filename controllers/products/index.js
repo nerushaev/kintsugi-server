@@ -19,6 +19,7 @@ const verifyCharacteristics = require("./verifyCharacteristics");
 const updatePopularStatus = require("./updatePopularStatus");
 const getPromStockFeed = require("./getPromStockFeed");
 const getPromBarcodeStockFeed = require("./getPromBarcodeStockFeed");
+const getGoogleMerchantFeed = require("./getGoogleMerchantFeed");
 
 module.exports = {
   getProducts,
@@ -42,4 +43,5 @@ module.exports = {
   updatePopularStatus,
   getPromStockFeed,
   getPromBarcodeStockFeed,
+  getGoogleMerchantFeed,
 };

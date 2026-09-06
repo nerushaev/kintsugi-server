@@ -1,5 +1,16 @@
 const { Schema, model } = require("mongoose");
 
+const productModificationSchema = new Schema(
+  {
+    ingredient_id: String,
+    modificator_name: String,
+    size_left: Number,
+    modificator_price: Number,
+    barcode: String,
+  },
+  { _id: false, strict: false }
+);
+
 const productSchema = new Schema({
   product_name: {
     type: String,
@@ -30,6 +41,22 @@ const productSchema = new Schema({
   },
   barcode: {
     type: String,
+  },
+  brand: {
+    type: String,
+    trim: true,
+  },
+  mpn: {
+    type: String,
+    trim: true,
+  },
+  google_product_category: {
+    type: String,
+    trim: true,
+  },
+  product_type: {
+    type: String,
+    trim: true,
   },
   score: {
     type: Number,
@@ -73,7 +100,8 @@ const productSchema = new Schema({
     type: String,
   },
   modifications: {
-    type: Array,
+    type: [productModificationSchema],
+    default: [],
   },
   amount: {
     type: Number,
@@ -88,6 +116,9 @@ const productSchema = new Schema({
   posterArchived: {
     type: Boolean,
     default: false,
+  },
+  comingSoon: {
+    type: String,
   }
 }, { versionKey: false, timestamps: true }
 );

@@ -6,9 +6,18 @@ const ACTIVE_INVENTORY_FILTER = {
   posterArchived: { $ne: true },
 };
 
-const WEBSITE_PRODUCT_FILTER = {
-  ...ACTIVE_INVENTORY_FILTER,
+const WEBSITE_SELLABLE_FILTER = {
+  category_name: { $nin: WEBSITE_EXCLUDED_CATEGORIES },
+  posterArchived: { $ne: true },
   websiteHidden: { $ne: true },
+  hidden: { $ne: "1" },
+  price: { $gt: 3000 },
+  comingSoon: { $exists: false },
+};
+
+const WEBSITE_PRODUCT_FILTER = {
+  ...WEBSITE_SELLABLE_FILTER,
+  amount: { $gt: 0 },
 };
 
 const isWebsiteCategory = (categoryName) =>
@@ -17,6 +26,7 @@ const isWebsiteCategory = (categoryName) =>
 module.exports = {
   WEBSITE_EXCLUDED_CATEGORIES,
   ACTIVE_INVENTORY_FILTER,
+  WEBSITE_SELLABLE_FILTER,
   WEBSITE_PRODUCT_FILTER,
   isWebsiteCategory,
 };

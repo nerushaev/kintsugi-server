@@ -5,7 +5,7 @@
   "scripts": {
     "start": "cross-env NODE_ENV=production node ./server.js",
     "start:dev": "cross-env NODE_ENV=development nodemon ./server.js",
-    "test": "node --test test/posterWebhook.test.js test/promStockFeed.test.js test/promBarcodeStockFeed.test.js",
+    "test": "node --test test/posterWebhook.test.js test/promStockFeed.test.js test/promBarcodeStockFeed.test.js test/googleMerchantFeed.test.js",
     "payments:reconcile": "node ./scripts/reconcileMonobankPayments.js",
     "poster:reconcile-stock": "node ./scripts/reconcilePosterStock.js",
     "poster:sync-barcodes": "node ./scripts/syncPosterBarcodes.js",
@@ -45,6 +45,7 @@
     "url": "^0.11.0"
   },
   "devDependencies": {
-    "nodemon": "^3.1.14"
+    "nodemon": "^3.1.14",
+    "saxes": "^5.0.1"
   }
 }
