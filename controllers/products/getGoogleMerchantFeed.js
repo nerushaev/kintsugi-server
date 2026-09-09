@@ -10,7 +10,7 @@ const {
 const getGoogleMerchantFeed = async (_req, res) => {
   const products = await Product.find(
     WEBSITE_PRODUCT_FILTER,
-    "product_id product_name category_name description photo photo_origin photo_extra price amount barcode modifications brand mpn google_product_category product_type color"
+    "product_id product_name category_name description photo photo_origin photo_extra photo_public photo_public_source price amount barcode modifications brand mpn google_product_category product_type color"
   ).lean();
   const items = products
     .flatMap(mapProductToMerchantItems)

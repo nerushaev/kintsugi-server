@@ -1,4 +1,5 @@
 const SITE_URL = "https://kintsugi.org.ua";
+const { getPublicProductImage } = require("../helpers/publicProductImage");
 const POSTER_IMAGE_URL = "https://kintsugi.joinposter.com";
 const FALLBACK_IMAGE_MARKER = "image_not_found_wruanw";
 const STORE_COLLECTION_LABEL = "Kintsugi Select";
@@ -103,6 +104,8 @@ const normalizeImageUrl = (value) => {
 };
 
 const getMainImage = (product) => {
+  const publicImage = getPublicProductImage(product);
+  if (publicImage) return publicImage;
   const systemImage = product.photo_origin || product.photo;
   const normalizedSystemImage = normalizeImageUrl(systemImage);
   if (normalizedSystemImage) return normalizedSystemImage;

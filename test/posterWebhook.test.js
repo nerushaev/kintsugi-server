@@ -285,6 +285,8 @@ test("product changed preserves fields owned by the website", async () => {
   for (const websiteField of [
     "description",
     "photo_extra",
+    "photo_public",
+    "photo_public_source",
     "material",
     "color",
     "equipment",

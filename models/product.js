@@ -32,6 +32,9 @@ const productSchema = new Schema({
     type: String,
     // required: true,
   },
+  // Managed independently of Poster; source guards against stale copies.
+  photo_public: { type: String },
+  photo_public_source: { type: String },
   product_id: {
     type: String,
     index: true,

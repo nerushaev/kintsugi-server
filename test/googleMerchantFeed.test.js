@@ -19,6 +19,19 @@ const baseProduct = {
   modifications: [],
 };
 
+test("feed prefers the verified copy but rejects stale copies after a Poster photo change", () => {
+  const mirrored = {
+    ...baseProduct,
+    photo_public: "https://res.cloudinary.com/demo/image/upload/v1/photo.jpg",
+    photo_public_source: "https://kintsugi.joinposter.com/upload/product.jpg",
+  };
+  assert.equal(mapProductToMerchantItems(mirrored)[0].imageLink, mirrored.photo_public);
+  assert.equal(mapProductToMerchantItems({ ...mirrored, photo_origin: "/upload/new.jpg" })[0].imageLink,
+    "https://kintsugi.joinposter.com/upload/new.jpg");
+  assert.equal(mapProductToMerchantItems(baseProduct)[0].imageLink,
+    "https://kintsugi.joinposter.com/upload/product.jpg");
+});
+
 test("serializes parseable RSS XML with escaped special characters", () => {
   const items = mapProductToMerchantItems(baseProduct);
   const xml = serializeGoogleMerchantFeed(items);
