@@ -97,7 +97,11 @@ const normalizeImageUrl = (value) => {
     : raw.replace(/^http:\/\//i, "https://");
   try {
     const parsed = new URL(absolute);
-    return parsed.protocol === "https:" ? parsed.toString() : null;
+    // Poster disallows crawlers. Wait for the verified mirror instead of
+    // submitting a URL that will predictably be rejected by Merchant Center.
+    return parsed.protocol === "https:" && !parsed.username && !parsed.password &&
+      parsed.hostname !== "kintsugi.joinposter.com"
+      ? parsed.toString() : null;
   } catch {
     return null;
   }

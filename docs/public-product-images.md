@@ -13,8 +13,8 @@ Google's existing image rejection. No upload occurs in a web request or webhook.
 
 Fields `photo_public` and `photo_public_source` store the copy and normalized
 source URL. Poster updates use their own explicit fields and preserve these.
-If the original source URL changes, the copy is ignored until migration runs
-again. An image replaced at the exact same source URL cannot be detected by this
+If the original source URL changes, the copy is ignored until the background worker
+copies the replacement. An image replaced at the exact same source URL cannot be detected by this
 mechanism: change/version the source URL before copying a replacement.
 
 ## Preview (read-only database access)
@@ -57,9 +57,24 @@ Only after the pilot succeeds, approve a bounded bulk run, for example:
 npm run products:mirror-images -- --apply --limit=100
 ```
 
-Re-run for new or changed Poster images; no background schedule is installed.
-During rollout, unmigrated products still contain Poster URLs and can remain
-rejected. Additional gallery images are not migrated by this script.
+## Automatic preparation
+
+The server starts an image worker after connecting to MongoDB, then scans every
+five minutes. It processes visible, in-stock website products sequentially using
+the same upload, public retrieval and conditional-save logic as the CLI. Completed
+copies are skipped. Failures retry on the next scan and do not block later products
+or Poster stock synchronization. Scans do not overlap within a server process;
+stable Cloudinary IDs and conditional saves also make duplicate attempts safe.
+Pending work is derived from persisted product fields and survives restarts.
+The production server needs its existing `CLOUDINARY_URL` configuration.
+
+The Google feed never publishes Poster image URLs. Products without a usable
+main or extra image wait until their copy is ready. Existing checks still require
+a known website category, ID, title, positive price and available stock. The next
+feed request includes prepared products automatically; allow for CDN caching and
+Merchant Center's daily fetch. Google policy approval is a separate review.
+Worker logs report attempted/saved/failed counts and IDs requiring retry, without
+SDK error contents or credentials. Additional gallery images are not migrated.
 
 ## Rollback
 

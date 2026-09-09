@@ -1,8 +1,8 @@
 const cloudinary = require("cloudinary").v2;
 
-cloudinary.config = {
+cloudinary.config({
   secure: true,
-};
+});
 
 const options = {
   use_filename: true,

@@ -12,7 +12,7 @@ const baseProduct = {
   product_name: 'Костюм & плащ <героя> "Лис"',
   category_name: "Косплей",
   description: "<p>Легкий &amp; зручний</p>",
-  photo_origin: "/upload/product.jpg",
+  photo_origin: "https://res.cloudinary.com/demo/image/upload/product.jpg",
   photo_extra: [],
   price: 129900,
   amount: 0,
@@ -22,14 +22,13 @@ const baseProduct = {
 test("feed prefers the verified copy but rejects stale copies after a Poster photo change", () => {
   const mirrored = {
     ...baseProduct,
+    photo_origin: "/upload/product.jpg",
     photo_public: "https://res.cloudinary.com/demo/image/upload/v1/photo.jpg",
     photo_public_source: "https://kintsugi.joinposter.com/upload/product.jpg",
   };
   assert.equal(mapProductToMerchantItems(mirrored)[0].imageLink, mirrored.photo_public);
-  assert.equal(mapProductToMerchantItems({ ...mirrored, photo_origin: "/upload/new.jpg" })[0].imageLink,
-    "https://kintsugi.joinposter.com/upload/new.jpg");
-  assert.equal(mapProductToMerchantItems(baseProduct)[0].imageLink,
-    "https://kintsugi.joinposter.com/upload/product.jpg");
+  assert.deepEqual(mapProductToMerchantItems({ ...mirrored, photo_origin: "/upload/new.jpg" }), []);
+  assert.deepEqual(mapProductToMerchantItems({ ...baseProduct, photo_origin: "/upload/product.jpg" }), []);
 });
 
 test("serializes parseable RSS XML with escaped special characters", () => {

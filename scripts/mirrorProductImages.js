@@ -1,6 +1,5 @@
 const path = require("node:path");
 const mongoose = require("mongoose");
-const axios = require("axios");
 require("dotenv").config({ path: path.join(__dirname, "..", ".env") });
 const Product = require("../models/product");
 const { WEBSITE_PRODUCT_FILTER } = require("../helpers/productVisibility");
@@ -44,21 +43,7 @@ async function main() {
       try {
         const result = await mirrorProductImage(product, {
           apply: options.apply,
-          upload: (source, uploadOptions) => cloudinary.uploader.upload(source, uploadOptions),
-          verify: async (url) => {
-            const response = await axios.get(url, { responseType: "arraybuffer", timeout: 30000, maxRedirects: 0, maxContentLength: 20 * 1024 * 1024 });
-            if (!/^image\//i.test(response.headers["content-type"] || "") || !response.data.length) {
-              throw new Error("Uploaded image is not publicly readable");
-            }
-          },
-          save: async (snapshot, fields) => {
-            const unchanged = { _id: snapshot._id };
-            for (const key of ["photo", "photo_origin", "photo_public", "photo_public_source"]) {
-              unchanged[key] = snapshot[key] === undefined ? { $exists: false } : snapshot[key];
-            }
-            const result = await Product.updateOne(unchanged, { $set: fields });
-            return result.matchedCount === 1;
-          },
+          ...require("../services/productImageStorage"),
         });
         statuses[result.status] = (statuses[result.status] || 0) + 1;
         if (result.status === "changed_during_upload") failed++;
