@@ -1,5 +1,6 @@
 const crypto = require("crypto");
 const Order = require("../../models/order");
+const { recordPurchaseConfirmation } = require("../../services/purchaseAnalytics");
 const { transport } = require("../../middleware");
 
 const {
@@ -136,6 +137,7 @@ const monobankWebhook = async (req, res) => {
   }
 
   if (status === "success") {
+    await recordPurchaseConfirmation(order);
     await sendPaymentNotifications(order);
   }
 

@@ -1,4 +1,5 @@
 const Order = require("../../models/order");
+const { sanitizeAnalytics } = require("../../services/purchaseAnalytics");
 const Product = require("../../models/product");
 const Bundle = require("../../models/bundle");
 const { User } = require("../../models/user");
@@ -360,6 +361,7 @@ const addOrder = async (req, res) => {
   let order;
   try {
     order = await Order.create({
+      analytics: sanitizeAnalytics(req.body.analytics),
       clientRequestId,
       orderId,
       date,

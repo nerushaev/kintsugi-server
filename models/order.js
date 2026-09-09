@@ -2,6 +2,14 @@ const { Schema, model } = require("mongoose");
 
 const orderSchema = new Schema(
   {
+    analytics: { clientId: String, sessionId: String },
+    analyticsConfirmedAt: Date,
+    analyticsSentAt: Date,
+    analyticsDeliveryStatus: String,
+    analyticsAttempts: Number,
+    analyticsNextAttemptAt: Date,
+    analyticsLockedUntil: Date,
+    analyticsLease: String,
     clientRequestId: {
       type: String,
       unique: true,

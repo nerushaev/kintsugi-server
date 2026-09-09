@@ -1,4 +1,5 @@
 const Order = require("../../models/order");
+const { recordPurchaseConfirmation } = require("../../services/purchaseAnalytics");
 
 const ORDER_STATUSES = new Set([
   "new",
@@ -35,6 +36,8 @@ const updateOrderField = async (req, res) => {
   if (!updatedOrder) {
     return res.status(404).json({ message: "Замовлення не знайдено" });
   }
+
+  await recordPurchaseConfirmation(updatedOrder);
 
   return res.json({
     message: key === "TTN" ? "ТТН оновлено" : "Статус замовлення оновлено",

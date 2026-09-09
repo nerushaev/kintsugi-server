@@ -1,5 +1,6 @@
 const axios = require("axios");
 const Order = require("../../models/order");
+const { recordPurchaseConfirmation } = require("../../services/purchaseAnalytics");
 const { sendPaymentNotifications } = require("../products/monobankWebhook");
 
 const MONOBANK_STATUSES = new Set([
@@ -47,6 +48,7 @@ const syncPaymentStatus = async (req, res) => {
   order.paymentStatus = data.status;
   await order.save();
   if (data.status === "success") {
+    await recordPurchaseConfirmation(order);
     await sendPaymentNotifications(order);
   }
 
