@@ -9,7 +9,10 @@ const Credential = require("../models/marketingWebhookCredential");
     const probe = await axios.post(url, {}, { validateStatus: () => true, timeout: 15000 });
     if (probe.status !== 401) throw new Error("Deploy authenticated webhook endpoint first");
     const api = axios.create({ baseURL: "https://api.brevo.com/v3/", headers: { "api-key": process.env.BREVO_API_KEY }, timeout: 15000, maxRedirects: 0 });
-    const { data } = await api.get("webhooks", { params: { type: "marketing" } });
+    const { data } = await api.get("webhooks", { params: { type: "marketing" } }).catch(error => {
+      if ([400, 404].includes(error.response?.status) && error.response?.data?.code === "document_not_found") return { data: { webhooks: [] } };
+      throw error;
+    });
     const existing = data.webhooks?.find(w => w.url === url);
     const token = crypto.randomBytes(32).toString("hex");
     await mongoose.connect(process.env.DB_HOST);
