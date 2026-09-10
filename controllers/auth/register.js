@@ -37,6 +37,7 @@ const register = async (req, res) => {
   }
 
   const verificationToken = randomId(36, "aA0");
+  await require("../../services/marketingPreferences").recordRegistration(email, req.body.marketingOptIn);
   const newUser = await User.create({
     firstName,
     lastName,

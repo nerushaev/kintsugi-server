@@ -48,6 +48,7 @@ app.use(express.json({
 app.use(cookieParser());
 
 app.use("/api/auth/", authRouter);
+app.post("/api/marketing/brevo/webhook", require("./controllers/brevoWebhook"));
 app.use("/api/products/", productsRouter);
 app.use("/api/orders/", orderRouter);
 app.use("/api/feedback/", feedbackRouter);

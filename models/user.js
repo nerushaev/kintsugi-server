@@ -107,6 +107,7 @@ const registerSchema = Joi.object({
   password: Joi.string().min(7).max(72).required(),
   phone: phoneSchema.required(),
   checkoutOrderId: Joi.string().trim().max(100).optional(),
+  marketingOptIn: Joi.boolean().strict().default(false),
 });
 
 const loginSchema = Joi.object({

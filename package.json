@@ -6,7 +6,7 @@
     "marketing:check": "node scripts/checkBrevo.js",
     "start": "cross-env NODE_ENV=production node ./server.js",
     "start:dev": "cross-env NODE_ENV=development nodemon ./server.js",
-    "test": "node --test test/posterWebhook.test.js test/promStockFeed.test.js test/promBarcodeStockFeed.test.js test/googleMerchantFeed.test.js test/mirrorProductImages.test.js test/productImageWorker.test.js test/purchaseAnalytics.test.js test/promoPricing.test.js test/promoOrder.test.js test/brevoMarketing.test.js",
+    "test": "node --test test/posterWebhook.test.js test/promStockFeed.test.js test/promBarcodeStockFeed.test.js test/googleMerchantFeed.test.js test/mirrorProductImages.test.js test/productImageWorker.test.js test/purchaseAnalytics.test.js test/promoPricing.test.js test/promoOrder.test.js test/brevoMarketing.test.js test/marketingPreferences.test.js",
     "products:mirror-images": "node ./scripts/mirrorProductImages.js",
     "payments:reconcile": "node ./scripts/reconcileMonobankPayments.js",
     "poster:reconcile-stock": "node ./scripts/reconcilePosterStock.js",
