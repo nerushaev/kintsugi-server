@@ -1,7 +1,7 @@
+const { buildProducts, buildBundles, validateCombinedAvailability } = require("../../services/orderCart");
+const { priceOrder } = require("../../services/promoPricing");
 const Order = require("../../models/order");
 const { sanitizeAnalytics } = require("../../services/purchaseAnalytics");
-const Product = require("../../models/product");
-const Bundle = require("../../models/bundle");
 const { User } = require("../../models/user");
 const RandExp = require("randexp");
 const { transport } = require("../../middleware");
@@ -14,7 +14,6 @@ const {
   formatMoney,
   mailFrom,
 } = require("../../helpers/emailTemplates");
-const { WEBSITE_PRODUCT_FILTER } = require("../../helpers/productVisibility");
 const {
   PERSON_NAME_PATTERN,
   normalizePersonName,
@@ -26,15 +25,9 @@ const {
 const PAYMENT_METHODS = new Set(["cash", "card"]);
 const DELIVERY_METHODS = new Set(["nova", "self"]);
 const NOVA_DELIVERY_TYPES = new Set(["branch", "postbox", "address"]);
-const MIN_ORDER_PRICE = 300;
 
 const cleanText = (value, maxLength = 300) =>
   typeof value === "string" ? value.trim().slice(0, maxLength) : "";
-
-const positiveInteger = (value) => {
-  const parsed = Number(value);
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : 0;
-};
 
 const validateContact = ({ firstName, lastName, email, phone }) => {
   if (!firstName || !lastName || !email || !phone) {
@@ -102,155 +95,6 @@ const normalizeAddress = (deliveryMethod, source = {}) => {
   return address;
 };
 
-const buildProducts = async (requestedProducts) => {
-  if (!Array.isArray(requestedProducts)) throw new Error("INVALID_CART");
-
-  const requested = requestedProducts.map((item) => ({
-    productId: cleanText(item?.product_id, 80),
-    amount: positiveInteger(item?.amount),
-    size: cleanText(item?.size, 80),
-  }));
-
-  if (requested.some((item) => !item.productId || !item.amount)) {
-    throw new Error("INVALID_CART");
-  }
-
-  const products = await Product.find({
-    ...WEBSITE_PRODUCT_FILTER,
-    product_id: { $in: [...new Set(requested.map(({ productId }) => productId))] },
-  }).lean();
-  const byId = new Map(products.map((product) => [product.product_id, product]));
-
-  return requested.map((item) => {
-    const product = byId.get(item.productId);
-    if (!product) throw new Error("PRODUCT_UNAVAILABLE");
-
-    let available = Number(product.amount) || 0;
-    if (item.size) {
-      const modification = product.modifications?.find(
-        (entry) => entry.modificator_name === item.size
-      );
-      available = Number(modification?.size_left) || 0;
-    }
-    if (available < item.amount) throw new Error("PRODUCT_UNAVAILABLE");
-
-    return {
-      product_id: product.product_id,
-      product_name: product.product_name,
-      category_name: product.category_name,
-      photo: product.photo,
-      photo_origin: product.photo_origin,
-      price: Number(product.price) || 0,
-      amount: item.amount,
-      ...(item.size && { size: item.size }),
-    };
-  });
-};
-
-const buildBundles = async (requestedBundles) => {
-  if (!Array.isArray(requestedBundles) || requestedBundles.length === 0) return [];
-
-  const requested = requestedBundles.map((item) => ({
-    bundleId: cleanText(item?.bundle_id, 80),
-    amount: positiveInteger(item?.amount),
-    selectedSizes: new Map(
-      Array.isArray(item?.products)
-        ? item.products.map((product) => [String(product.product_id), cleanText(product.size, 80)])
-        : []
-    ),
-  }));
-  if (requested.some((item) => !item.bundleId || !item.amount)) {
-    throw new Error("INVALID_CART");
-  }
-
-  const bundles = await Bundle.find({
-    bundle_id: { $in: requested.map(({ bundleId }) => bundleId) },
-    isActive: true,
-  }).populate("products").lean();
-  const byId = new Map(bundles.map((bundle) => [bundle.bundle_id, bundle]));
-
-  return requested.map((item) => {
-    const bundle = byId.get(item.bundleId);
-    if (!bundle) throw new Error("PRODUCT_UNAVAILABLE");
-
-    const products = bundle.products.map((product) => {
-      const size = item.selectedSizes.get(String(product.product_id)) || "";
-      let available = Number(product.amount) || 0;
-      if (size) {
-        const modification = product.modifications?.find(
-          (entry) => entry.modificator_name === size
-        );
-        available = Number(modification?.size_left) || 0;
-      }
-      if (product.websiteHidden || available < item.amount) {
-        throw new Error("PRODUCT_UNAVAILABLE");
-      }
-      return {
-        product_id: product.product_id,
-        product_name: product.product_name,
-        photo: product.photo,
-        photo_origin: product.photo_origin,
-        price: Number(product.price) || 0,
-        ...(size && { size }),
-      };
-    });
-
-    return {
-      bundle_id: bundle.bundle_id,
-      title: bundle.title,
-      newPrice: Number(bundle.newPrice || bundle.price) || 0,
-      amount: item.amount,
-      products,
-    };
-  });
-};
-
-const validateCombinedAvailability = async (products, bundles) => {
-  const requirements = new Map();
-  const addRequirement = (productId, size, amount) => {
-    const normalizedSize = cleanText(size, 80);
-    const key = `${productId}:${normalizedSize}`;
-    requirements.set(key, {
-      productId,
-      size: normalizedSize,
-      amount: (requirements.get(key)?.amount || 0) + amount,
-    });
-  };
-
-  products.forEach((product) =>
-    addRequirement(product.product_id, product.size, product.amount)
-  );
-  bundles.forEach((bundle) => {
-    bundle.products.forEach((product) =>
-      addRequirement(product.product_id, product.size, bundle.amount)
-    );
-  });
-
-  const requested = [...requirements.values()];
-  const storedProducts = await Product.find({
-    ...WEBSITE_PRODUCT_FILTER,
-    product_id: { $in: [...new Set(requested.map((item) => item.productId))] },
-  })
-    .select("product_id amount modifications")
-    .lean();
-  const byId = new Map(storedProducts.map((product) => [product.product_id, product]));
-
-  for (const item of requested) {
-    const product = byId.get(item.productId);
-    if (!product) throw new Error("PRODUCT_UNAVAILABLE");
-
-    const available = item.size
-      ? Number(
-          product.modifications?.find(
-            (modification) => modification.modificator_name === item.size
-          )?.size_left
-        ) || 0
-      : Number(product.amount) || 0;
-
-    if (available < item.amount) throw new Error("PRODUCT_UNAVAILABLE");
-  }
-};
-
 const publicOrderResponse = (order) => ({
   message: "Замовлення прийнято!",
   orderId: order.orderId,
@@ -258,6 +102,9 @@ const publicOrderResponse = (order) => ({
     ? { invoiceId: order.paymentId, pageUrl: order.paymentUrl }
     : undefined,
   status: order.status,
+  totalPrice: order.totalPrice,
+  discountAmount: order.discountAmount,
+  promoCode: order.promoCode,
 });
 
 const linkOrderToUser = async (email, orderId) => {
@@ -342,16 +189,17 @@ const addOrder = async (req, res) => {
     return res.status(400).json({ message: "Кошик порожній" });
   }
 
-  const totalPrice =
-    products.reduce((sum, item) => sum + (item.price / 100) * item.amount, 0) +
-    bundles.reduce((sum, item) => sum + (item.newPrice / 100) * item.amount, 0);
-  if (!Number.isFinite(totalPrice) || totalPrice <= 0) {
-    return res.status(400).json({ message: "Не вдалося розрахувати суму замовлення" });
+  let pricing;
+  try {
+    pricing = await priceOrder(products, bundles, req.body.promoCode);
+  } catch (error) {
+    if (!error.status) throw error;
+    return res.status(error.status).json({ message: error.message });
   }
-  if (totalPrice < MIN_ORDER_PRICE) {
-    return res.status(400).json({
-      message: `Мінімальна сума замовлення — ${MIN_ORDER_PRICE} грн`,
-    });
+  const { totalPrice, subtotalPrice, discountAmount, promoCode, promoPercent } = pricing;
+
+  if (promoCode && (!Number.isFinite(req.body.expectedTotal) || Math.round(req.body.expectedTotal * 100) !== Math.round(totalPrice * 100))) {
+    return res.status(409).json({ message: "Сума замовлення змінилася. Застосуйте промокод повторно." });
   }
 
   const orderId = new RandExp(/^[A-Z]{2}\d{10}$/).gen();
@@ -376,7 +224,7 @@ const addOrder = async (req, res) => {
       address,
       products,
       bundles,
-      totalPrice,
+      totalPrice, subtotalPrice, discountAmount, promoCode, promoPercent,
       status: "new",
       paymentStatus: payments === "card" ? "creating" : undefined,
     });
@@ -428,6 +276,7 @@ const addOrder = async (req, res) => {
   const orderSummary = `${emailItems(orderItems)}${emailDetails([
     ["Доставка", deliveryLabel],
     ["Оплата", paymentLabel],
+    ...(discountAmount ? [["Сума товарів", `${formatMoney(subtotalPrice)} грн`], ["Промокод", promoCode], ["Знижка", `−${formatMoney(discountAmount)} грн`]] : []),
     ["Разом", `${formatMoney(totalPrice)} грн`],
   ])}`;
   const customerMailHtml = emailLayout({

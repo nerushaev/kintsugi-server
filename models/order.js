@@ -2,6 +2,10 @@ const { Schema, model } = require("mongoose");
 
 const orderSchema = new Schema(
   {
+    promoCode: String,
+    promoPercent: Number,
+    subtotalPrice: Number,
+    discountAmount: Number,
     analytics: { clientId: String, sessionId: String },
     analyticsConfirmedAt: Date,
     analyticsSentAt: Date,

@@ -9,6 +9,7 @@ router.post("/get", authenticate, ctrlWrapper(orderCtrl.getOrder));
 router.get("/:orderId/tracking", authenticate, ctrlWrapper(orderCtrl.getTrackingStatus));
 router.post("/:orderId/payment", authenticate, ctrlWrapper(orderCtrl.retryPayment));
 router.post("/:orderId/payment/status", authenticate, authorizeAdmin, ctrlWrapper(orderCtrl.syncPaymentStatus));
+router.post("/quote", require("express-rate-limit")({ windowMs: 60000, max: 30, message: { message: "Забагато спроб. Спробуйте за хвилину." } }), ctrlWrapper(require("../controllers/orders/quoteOrder")));
 router.post("/", ctrlWrapper(orderCtrl.addOrder));
 router.post("/createWaybill", authenticate, authorizeAdmin, ctrlWrapper(orderCtrl.createWaybill));
 router.patch('/:orderId/update', authenticate, authorizeAdmin, ctrlWrapper(orderCtrl.updateOrderField));

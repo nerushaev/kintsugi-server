@@ -28,6 +28,23 @@ const buildPurchaseEvent = (order) => {
   if (!Number.isFinite(value) || value <= 0 || !items.length || items.length > 200 || items.some((item) =>
     !item.item_id || item.item_id === "undefined" || !Number.isFinite(item.price) || item.price < 0 ||
     !Number.isInteger(item.quantity) || item.quantity <= 0)) return null;
+  if (order.discountAmount > 0) {
+    const gross = items.reduce((sum, item) => sum + Math.round(item.price * 100) * item.quantity, 0);
+    const discount = Math.round(order.discountAmount * 100);
+    if (!Number.isSafeInteger(discount) || discount >= gross || Math.abs(gross - discount - Math.round(value * 100)) > 0) return null;
+    let cumulative = 0;
+    let allocated = 0;
+    for (const item of items) {
+      const line = Math.round(item.price * 100) * item.quantity;
+      cumulative += line;
+      const next = Math.round(discount * cumulative / gross);
+      const lineDiscount = next - allocated;
+      allocated = next;
+      item.discount = lineDiscount / item.quantity / 100;
+      item.price = (line - lineDiscount) / item.quantity / 100;
+      item.coupon = order.promoCode;
+    }
+  }
   const itemTotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
   if (Math.abs(itemTotal - value) > 0.01) return null;
   const occurredAt = new Date(order.analyticsConfirmedAt);
@@ -36,7 +53,7 @@ const buildPurchaseEvent = (order) => {
     client_id: context.clientId,
     timestamp_micros: occurredAt.getTime() * 1000,
     events: [{ name: "purchase", params: {
-      transaction_id: order.orderId, currency: "UAH", value, items,
+      transaction_id: order.orderId, ...(order.promoCode && { coupon: order.promoCode }), currency: "UAH", value, items,
       payment_method: order.payments, engagement_time_msec: 1,
       ...(context.sessionId && { session_id: Number(context.sessionId) }),
     } }],
