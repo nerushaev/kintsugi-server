@@ -15,8 +15,19 @@ const workbookFixture = () => {
     "Наявність",
     "Кількість",
     "Унікальний_ідентифікатор",
+    "Знижка",
+    "Термін_дії_знижки_від",
+    "Термін_дії_знижки_до",
   ]);
-  sheet.addRow(["parent-code", "+", 99, "prom-1"]);
+  sheet.addRow([
+    "parent-code",
+    "+",
+    99,
+    "prom-1",
+    "10%",
+    "2025-01-01",
+    "2025-01-31",
+  ]);
   sheet.addRow(["size-s", "+", 99, "prom-2"]);
   sheet.addRow(["missing-code", "+", 99, "prom-3"]);
   return workbook;
@@ -50,12 +61,15 @@ test("updates only stock columns and zeroes missing mapped barcodes", () => {
   ]);
   const sheet = workbook.getWorksheet("Export Products Sheet");
   assert.equal(updatedRows, 3);
-  assert.deepEqual(sheet.getRow(2).values.slice(1), [
+  assert.deepEqual(sheet.getRow(2).values.slice(1, 5), [
     "parent-code",
     "+",
     4,
     "prom-1",
   ]);
+  assert.equal(sheet.getRow(2).getCell(5).value, null);
+  assert.equal(sheet.getRow(2).getCell(6).value, null);
+  assert.equal(sheet.getRow(2).getCell(7).value, null);
   assert.deepEqual(sheet.getRow(3).values.slice(1), [
     "size-s",
     "-",

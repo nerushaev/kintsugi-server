@@ -18,6 +18,9 @@ const asText = (value) => {
   return String(value).trim();
 };
 
+const normalizeHeader = (value) =>
+  asText(value).toLowerCase().replace(/[\s_]+/g, " ");
+
 const normalizeStock = (value) => {
   const parsed = Number(asText(value).replace(",", "."));
   return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 0;
@@ -88,6 +91,17 @@ const updateWorkbookStock = (workbook, products) => {
   const uniqueIdColumn = headers.get("Унікальний_ідентифікатор");
   const availabilityColumn = headers.get("Наявність");
   const quantityColumn = headers.get("Кількість");
+  const discountColumns = [];
+  sheet.getRow(1).eachCell({ includeEmpty: true }, (cell, column) => {
+    const header = normalizeHeader(cell.value);
+    if (
+      header === "знижка" ||
+      header === "термін дії знижки від" ||
+      header === "термін дії знижки до"
+    ) {
+      discountColumns.push(column);
+    }
+  });
   const stockByBarcode = buildStockIndex(products);
   let updatedRows = 0;
 
@@ -99,6 +113,9 @@ const updateWorkbookStock = (workbook, products) => {
     const stock = stockByBarcode.get(barcode) || 0;
     row.getCell(quantityColumn).value = stock;
     row.getCell(availabilityColumn).value = stock > 0 ? "+" : "-";
+    discountColumns.forEach((column) => {
+      row.getCell(column).value = null;
+    });
     updatedRows += 1;
   }
   if (!updatedRows) throw new Error("PROM_FEED_TEMPLATE_HAS_NO_MAPPED_ROWS");
