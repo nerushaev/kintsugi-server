@@ -38,6 +38,28 @@ analyticsAttempts and analyticsSentAt for operational verification.
 GA4 session attribution has time limits; delayed cash receipts may not attach to
 the original session. Refund events are not implemented by this change.
 
+## Confirmed orders for advertising
+
+New orders created after this change have `orderConfirmationEnabled: true`.
+An admin moving a COD order to `processing` confirms it for fulfilment; the UI
+labels this state "Підтверджено / в обробці". Moving directly to sent, shipped or
+completed also confirms it. Card orders qualify only after verified payment success.
+`order_confirmed` carries the authoritative order value in UAH, not paid revenue.
+`purchase` retains its existing meaning: paid card order or completed COD order.
+Never use both as primary bidding goals: import order_confirmed as the primary
+order goal in Ads and keep purchase secondary for observing paid revenue.
+
+The separate orderConfirmedAt/orderAnalytics* outbox preserves the first milestone,
+leases, retries and the sent marker independently of the existing purchase outbox.
+Canceled orders are excluded before claiming. A cancellation after delivery does
+not retract an already reported confirmation; it remains a historical confirmation,
+not a fulfilled sale. Custom events do not have the documented purchase transaction
+deduplication guarantee: ambiguous network timeouts can still cause duplicates,
+despite stable event_id, transaction_id and timestamps. No exactly-once claim is made.
+Old orders are not enrolled or assigned a new confirmation time by deployment.
+GA4 session attribution is time limited: confirm promptly; never manufacture a
+fresh session or backdate delayed confirmation to checkout time.
+
 ## Validation
 
 `npm test` uses fake transports; it never sends test purchases to production.

@@ -11,6 +11,11 @@ const isConfirmedPurchase = (order) => order.status !== "canceled" && (
   (order.payments === "cash" && order.status === "completed")
 );
 
+const isConfirmedOrder = (order) => order.status !== "canceled" && (
+  (order.payments === "card" && order.paymentStatus === "success") ||
+  (order.payments === "cash" && ["processing", "sent", "shipped", "completed"].includes(order.status))
+);
+
 const buildPurchaseEvent = (order) => {
   const context = sanitizeAnalytics(order.analytics);
   if (!context || !isConfirmedPurchase(order) || !order.orderId) return null;
@@ -62,10 +67,30 @@ const buildPurchaseEvent = (order) => {
 
 // Persist the first confirmation time; repeated callbacks never move it.
 const recordPurchaseConfirmation = async (order) => {
-  if (!sanitizeAnalytics(order.analytics) || !isConfirmedPurchase(order)) return;
+  if (!sanitizeAnalytics(order.analytics)) return;
   const Order = require("../models/order");
-  await Order.updateOne({ _id: order._id, analyticsConfirmedAt: { $exists: false } },
-    { $set: { analyticsConfirmedAt: new Date() } });
+  if (isConfirmedPurchase(order)) {
+    await Order.updateOne({ _id: order._id, analyticsConfirmedAt: { $exists: false } },
+      { $set: { analyticsConfirmedAt: new Date() } });
+  }
+  // Each milestone has its own durable outbox. Existing purchases are never reset.
+  if (order.orderConfirmationEnabled && isConfirmedOrder(order)) {
+    await Order.updateOne({ _id: order._id, orderConfirmedAt: { $exists: false } },
+      { $set: { orderConfirmedAt: new Date() } });
+  }
 };
 
-module.exports = { sanitizeAnalytics, isConfirmedPurchase, buildPurchaseEvent, recordPurchaseConfirmation };
+const buildConfirmedOrderEvent = (order) => {
+  if (!isConfirmedOrder(order)) return null;
+  // Reuse validated server totals/items without treating unpaid COD as revenue.
+  const payload = buildPurchaseEvent({ ...order, payments: "card", paymentStatus: "success",
+    analyticsConfirmedAt: order.orderConfirmedAt });
+  if (!payload) return null;
+  payload.events[0].name = "order_confirmed";
+  payload.events[0].params.payment_method = order.payments;
+  payload.events[0].params.event_id = `order_confirmed_${order.orderId}`;
+  return payload;
+};
+
+module.exports = { sanitizeAnalytics, isConfirmedPurchase, isConfirmedOrder, buildPurchaseEvent,
+  buildConfirmedOrderEvent, recordPurchaseConfirmation };

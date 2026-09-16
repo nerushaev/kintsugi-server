@@ -1,6 +1,6 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { sanitizeAnalytics, buildPurchaseEvent } = require("../services/purchaseAnalytics");
+const { sanitizeAnalytics, buildPurchaseEvent, buildConfirmedOrderEvent, recordPurchaseConfirmation } = require("../services/purchaseAnalytics");
 const { createPurchaseAnalyticsWorker } = require("../services/purchaseAnalyticsWorker");
 
 const paidOrder = () => ({
@@ -81,4 +81,75 @@ test("expired confirmations are not misreported as new purchases", async () => {
   });
   await worker();
   assert.equal(status, "expired");
+});
+
+test("COD confirmation is separate from paid revenue and respects cancellation", () => {
+  const order = { ...paidOrder(), payments: "cash", paymentStatus: undefined, orderConfirmedAt: new Date() };
+  assert.equal(buildConfirmedOrderEvent({ ...order, status: "new" }), null);
+  assert.equal(buildConfirmedOrderEvent({ ...order, status: "canceled" }), null);
+  for (const status of ["processing", "sent", "shipped", "completed"]) {
+    const event = buildConfirmedOrderEvent({ ...order, status }).events[0];
+    assert.equal(event.name, "order_confirmed");
+    assert.equal(event.params.value, 350);
+    assert.equal(event.params.payment_method, "cash");
+    assert.equal(event.params.transaction_id, order.orderId);
+    assert.doesNotMatch(JSON.stringify(event), /private|phone|address|email/i);
+  }
+  assert.equal(buildPurchaseEvent({ ...order, status: "processing" }), null);
+  assert.ok(buildPurchaseEvent({ ...order, status: "completed" }));
+  assert.equal(buildConfirmedOrderEvent({ ...order, status: "processing", totalPrice: 351 }), null);
+  assert.equal(buildConfirmedOrderEvent({ ...order, status: "processing", orderConfirmedAt: undefined }), null);
+  assert.equal(buildConfirmedOrderEvent({ ...order, status: "processing", analytics: undefined }), null);
+  assert.equal(buildConfirmedOrderEvent({ ...paidOrder(), paymentStatus: "unpaid", orderConfirmedAt: new Date() }), null);
+});
+
+test("order milestone persists once, does not backfill old orders or reset purchase delivery", async () => {
+  const Order = require("../models/order");
+  const original = Order.updateOne;
+  const updates = [];
+  const stored = {};
+  Order.updateOne = async (query, update) => {
+    updates.push({ query, update });
+    for (const [field, value] of Object.entries(update.$set)) {
+      assert.deepEqual(query[field], { $exists: false });
+      if (!(field in stored)) stored[field] = value;
+    }
+  };
+  try {
+    const order = { ...paidOrder(), _id: "test", payments: "cash", status: "processing", orderConfirmationEnabled: true };
+    await recordPurchaseConfirmation({ ...order, orderConfirmationEnabled: undefined });
+    await recordPurchaseConfirmation({ ...order, status: "new" });
+    await recordPurchaseConfirmation({ ...order, status: "canceled" });
+    assert.equal(updates.length, 0);
+    await recordPurchaseConfirmation(order);
+    const first = stored.orderConfirmedAt;
+    await recordPurchaseConfirmation({ ...order, status: "sent" });
+    assert.equal(stored.orderConfirmedAt, first);
+    assert.equal(stored.analyticsConfirmedAt, undefined);
+    await recordPurchaseConfirmation({ ...order, status: "completed" });
+    assert.ok(stored.analyticsConfirmedAt);
+    assert.equal(stored.orderConfirmedAt, first);
+    assert.ok(updates.every(({ update }) => !update.$set.analyticsSentAt && !update.$set.analyticsDeliveryStatus));
+  } finally { Order.updateOne = original; }
+});
+
+test("confirmation worker sends the distinct event and retains its original identity on retry", async () => {
+  const order = { ...paidOrder(), payments: "cash", status: "processing", orderConfirmedAt: new Date() };
+  let available = true;
+  const sent = [];
+  const results = [];
+  const worker = createPurchaseAnalyticsWorker({
+    buildEvent: buildConfirmedOrderEvent,
+    claim: async () => { if (!available) return null; available = false; return order; },
+    send: async (event) => { sent.push(event); if (sent.length === 1) throw new Error("timeout"); },
+    complete: async (_, status) => results.push(status),
+    retry: async () => {}, log: () => {},
+  });
+  await worker();
+  available = true;
+  await worker();
+  await worker();
+  assert.deepEqual(sent[0], sent[1]);
+  assert.equal(sent[0].events[0].name, "order_confirmed");
+  assert.deepEqual(results, ["sent"]);
 });

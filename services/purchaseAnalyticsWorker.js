@@ -1,9 +1,9 @@
 const { randomUUID } = require("node:crypto");
-const { buildPurchaseEvent } = require("./purchaseAnalytics");
+const { buildPurchaseEvent, buildConfirmedOrderEvent } = require("./purchaseAnalytics");
 
 // Stored order state is the outbox. Lease + stable transaction_id protect against
 // concurrent workers, restarts and a timeout after Google received the request.
-const createPurchaseAnalyticsWorker = ({ claim, complete, retry, send, log = console.log }) => {
+const createPurchaseAnalyticsWorker = ({ claim, complete, retry, send, buildEvent = buildPurchaseEvent, log = console.log }) => {
   let running = false;
   return async () => {
     if (running) return;
@@ -13,7 +13,7 @@ const createPurchaseAnalyticsWorker = ({ claim, complete, retry, send, log = con
         const order = await claim();
         if (!order) break;
         try {
-          const event = buildPurchaseEvent(order);
+          const event = buildEvent(order);
           if (!event) { await complete(order, "invalid_payload"); continue; }
           // GA4 accepts backdated events for up to 72 hours. Keep original time.
           if (Date.now() - event.timestamp_micros / 1000 > 72 * 60 * 60 * 1000) {
@@ -72,9 +72,42 @@ const startPurchaseAnalyticsWorker = () => {
       params: { measurement_id: measurementId, api_secret: secret }, timeout: 15000, maxRedirects: 0,
     }),
   });
-  timer = setInterval(worker, 60000);
+  const confirmedWorker = createPurchaseAnalyticsWorker({
+    buildEvent: buildConfirmedOrderEvent,
+    claim: async () => {
+      const now = new Date();
+      return Order.findOneAndUpdate({
+        orderConfirmationEnabled: true,
+        "analytics.clientId": { $exists: true }, orderConfirmedAt: { $exists: true },
+        orderAnalyticsDeliveryStatus: { $nin: ["sent", "expired", "invalid_payload"] },
+        status: { $ne: "canceled" },
+        $and: [
+          { $or: [{ payments: "card", paymentStatus: "success" },
+            { payments: "cash", status: { $in: ["processing", "sent", "shipped", "completed"] } }] },
+          { $or: [{ orderAnalyticsNextAttemptAt: { $exists: false } }, { orderAnalyticsNextAttemptAt: { $lte: now } }] },
+          { $or: [{ orderAnalyticsLockedUntil: { $exists: false } }, { orderAnalyticsLockedUntil: { $lte: now } }] },
+        ],
+      }, {
+        $set: { orderAnalyticsLockedUntil: new Date(Date.now() + 120000), orderAnalyticsLease: randomUUID() },
+        $inc: { orderAnalyticsAttempts: 1 },
+      }, { new: true, sort: { orderConfirmedAt: 1 } }).lean();
+    },
+    complete: (order, status) => Order.updateOne({ _id: order._id, orderAnalyticsLease: order.orderAnalyticsLease }, {
+      $set: { orderAnalyticsDeliveryStatus: status, ...(status === "sent" && { orderAnalyticsSentAt: new Date() }) },
+      $unset: { orderAnalyticsLockedUntil: 1, orderAnalyticsLease: 1, orderAnalyticsNextAttemptAt: 1 },
+    }),
+    retry: (order) => Order.updateOne({ _id: order._id, orderAnalyticsLease: order.orderAnalyticsLease }, {
+      $set: { orderAnalyticsNextAttemptAt: new Date(Date.now() + Math.min(3600000, 60000 * 2 ** Math.min(order.orderAnalyticsAttempts || 1, 6))) },
+      $unset: { orderAnalyticsLockedUntil: 1, orderAnalyticsLease: 1 },
+    }),
+    send: (event) => axios.post("https://www.google-analytics.com/mp/collect", event, {
+      params: { measurement_id: measurementId, api_secret: secret }, timeout: 15000, maxRedirects: 0,
+    }),
+  });
+  const tick = () => Promise.all([worker(), confirmedWorker()]);
+  timer = setInterval(tick, 60000);
   timer.unref();
-  void worker();
+  void tick();
 };
 
 module.exports = { createPurchaseAnalyticsWorker, startPurchaseAnalyticsWorker };

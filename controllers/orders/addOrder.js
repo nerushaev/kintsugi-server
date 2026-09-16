@@ -210,6 +210,7 @@ const addOrder = async (req, res) => {
   try {
     order = await Order.create({
       analytics: sanitizeAnalytics(req.body.analytics),
+      orderConfirmationEnabled: true,
       clientRequestId,
       orderId,
       date,
