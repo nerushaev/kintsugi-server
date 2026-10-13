@@ -29,7 +29,7 @@ const buildProducts = async (requestedProducts) => {
     let available = Number(product.amount) || 0;
     if (item.size) {
       const modification = product.modifications?.find(
-        (entry) => entry.modificator_name === item.size
+        (entry) => entry.modificator_name?.trim() === item.size
       );
       available = Number(modification?.size_left) || 0;
     }
@@ -79,7 +79,7 @@ const buildBundles = async (requestedBundles) => {
       let available = Number(product.amount) || 0;
       if (size) {
         const modification = product.modifications?.find(
-          (entry) => entry.modificator_name === size
+          (entry) => entry.modificator_name?.trim() === size
         );
         available = Number(modification?.size_left) || 0;
       }
@@ -143,7 +143,7 @@ const validateCombinedAvailability = async (products, bundles) => {
     const available = item.size
       ? Number(
           product.modifications?.find(
-            (modification) => modification.modificator_name === item.size
+            (modification) => modification.modificator_name?.trim() === item.size
           )?.size_left
         ) || 0
       : Number(product.amount) || 0;

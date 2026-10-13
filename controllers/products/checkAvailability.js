@@ -68,7 +68,7 @@ const checkAvailability = async (req, res) => {
 
     if (requirement.size) {
       const modification = product.modifications?.find(
-        (item) => item.modificator_name === requirement.size
+        (item) => item.modificator_name?.trim() === requirement.size
       );
       availableAmount = Number(modification?.size_left) || 0;
     }
